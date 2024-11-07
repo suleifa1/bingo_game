@@ -1,0 +1,6 @@
+
+*.make
+*.cmake
+/server/cmake-build-debug
+*.iml
+*.xml
