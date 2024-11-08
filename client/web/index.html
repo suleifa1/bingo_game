@@ -1,73 +1,97 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Клиентское приложение</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bingo App</title>
+    <link rel="stylesheet" href="css/index.css">
     <script type="text/javascript" src="/eel.js"></script>
+    <script src="js/func.js"></script>
 </head>
 <body>
-    <h1>Клиентское приложение</h1>
-    <div>
-        <label for="nickname">Введите никнейм:</label>
-        <input type="text" id="nickname" />
-        <button onclick="register()">Зарегистрироваться</button>
-    </div>
-    <div>
-        <button onclick="findGame()">Найти игру</button>
-        <button onclick="markNumber()">Отметить номер</button>
-        <button onclick="bingoCheck()">Проверить Бинго</button>
-        <button onclick="askTicket()">Запросить билет</button>
-        <button onclick="disconnect()">Отключиться</button>
-    </div>
-    <div>
-        <h2>Статус: <span id="status">Отключен</span></h2>
-    </div>
-    <div id="messages" style="border: 1px solid #000; height: 200px; overflow-y: scroll;"></div>
 
-    <script type="text/javascript">
-        async function register() {
-            let nickname = document.getElementById("nickname").value;
-            await eel.register(nickname)();
-        }
+    <!-- Страница регистрации -->
+    <section id="registration" class="page ">
+        <div class="container">
+            <div class="registration-box">
+                <h1>Добро пожаловать в Bingo!</h1>
+                <p>Введите ваш никнейм для регистрации:</p>
+                <input type="text" id="nickname" placeholder="Ваш никнейм">
+                <button onclick="register()">Зарегистрироваться</button>
+            </div>
+        </div>
+    </section>
 
-        async function findGame() {
-            await eel.find_game()();
-        }
+    <!-- Лобби -->
+    <section id="lobby" class="page hidden">
+        <div class="container">
+            <div class="lobby-box">
+                <h1>Лобби Bingo</h1>
 
-        async function markNumber() {
-            let number = prompt("Введите номер для отметки:");
-            if (number) {
-                await eel.mark_number(parseInt(number))();
-            }
-        }
+                <!-- Действия -->
+                <div class="actions">
+                    <button onclick="findGame()">Поиск Игры</button>
+                    <button onclick="disconnect()">Выход</button>
+                </div>
 
-        async function bingoCheck() {
-            await eel.bingo_check()();
-        }
+                <!-- Правила игры -->
+                <div class="rules">
+                    <h3>Правила Игры</h3>
+                    <p>Бинго — это игра, в которой нужно отметить числа на своей карточке. Слушайте номера, которые объявляются, и отмечайте их. Когда у вас будет линия или полный ряд отмеченных номеров, вы можете крикнуть "Бинго!" и выиграть!</p>
+                </div>
+            </div>
+        </div>
+    </section>
 
-        async function askTicket() {
-            await eel.ask_ticket()();
-        }
+    <!-- Комната ожидания -->
+    <section id="waiting-room" class="page hidden">
+        <div class="container">
+            <div class="room-box">
+                <h1>Комната ожидания</h1>
 
-        async function disconnect() {
-            await eel.disconnect()();
-        }
+                <!-- Действия -->
+                <div class="actions">
+                    <button id="get_button" onclick="askTicket()">Взять Билет</button>
+                    <button onclick="leaveRoom()">Выйти</button>
+                </div>
 
-        // Функция для обновления статуса
-        function update_status(status) {
-            document.getElementById("status").innerText = status;
-        }
+                <!-- Билет бинго -->
+                <div id="ticket" class="ticket hidden">
+                    <h3>Ваш Билет</h3>
+                    <div class="ticket-grid">
+                        <!-- Номера билета будут добавлены сюда -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
 
-        // Функция для добавления сообщений в лог
-        function log_message(message) {
-            let messagesDiv = document.getElementById("messages");
-            messagesDiv.innerHTML += `<p>${message}</p>`;
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
-        }
+<!-- Игровая секция -->
+    <section id="game-page" class="page hidden">
+        <div class="container">
+            <div class="game-box">
+                <h1>Игра Bingo</h1>
 
-        // Экспорт функций для вызова из Python
-        eel.expose(update_status);
-        eel.expose(log_message);
-    </script>
+                <!-- Показ текущего номера -->
+                <div class="current-number">
+                    <h2>Текущий номер:</h2>
+                    <div id="number-display">--</div>
+                </div>
+
+                <!-- Карточка игрока -->
+                <div class="ticket">
+                    <h3>Ваша Карточка</h3>
+                    <div class="ticket-grid">
+                        <!-- Номера билета будут добавлены сюда -->
+                    </div>
+                </div>
+
+                <!-- Кнопка для бинго -->
+                <button class="bingo-button" onclick="declareBingo()">Бинго!</button>
+            </div>
+        </div>
+    </section>
+
+
 </body>
 </html>

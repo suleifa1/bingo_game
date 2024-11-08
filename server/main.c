@@ -62,8 +62,9 @@ enum CommandType {
     CMDS_PING,
     CMDS_OK,
     CMDS_END_GAME,
-    CMDS_INFO,
+    CMDS_USER_INFO,
     CMD_FINDGAME,
+    CMDS_ROOM_INFO,
     TOTAL_CMDS
 };
 
@@ -511,18 +512,18 @@ void manage_game_rooms() {
 /// {room functions}
 
 /// {server side func}
-void cmds_info(struct Client *client) {
+void send_user_info(struct Client *client) {
     if (client->state == STATE_DISCONNECTED || client->socket <= 0 || client->state == STATE_RECONNECTING) {
         perror("Client is not connected or invalid socket\n");
         return;
     }
 
-    // Создаем заголовок сообщения с командой CMDS_INFO и длиной структуры клиента
-    struct MessageHeader header = {"SP", CMDS_INFO, sizeof(struct Client)};
+    // Создаем заголовок сообщения с командой CMDS_USER_INFO и длиной структуры клиента
+    struct MessageHeader header = {"SP", CMDS_USER_INFO, sizeof(struct Client)};
 
     // Отправляем заголовок сообщения
     if (send(client->socket, &header, sizeof(header), 0) < 0) {
-        perror("Failed to send CMDS_INFO header");
+        perror("Failed to send CMDS_USER_INFO header");
         return;
     }
 
@@ -678,15 +679,18 @@ void handle_reconnect_timeout(int client_index) {
 void handle_reconnect_request(int new_socket, const char* nickname, struct Client *client) {
     struct Client* old_client = NULL;
 
-
+    printf("start Search fir nikname: %s\n",client->nickname);
     // Ищем клиента в RECONNECTING по нику
     for (int i = 0; i < MAX_CLIENTS; i++) {
         print_client_info(&clients[i]);
-        if ((strcmp(clients[i].nickname, nickname) == 0 && clients[i].state == STATE_RECONNECTING )) {
+        printf("comppre: %d\n",(strcmp(clients[i].nickname, client->nickname)));
+        if ((strcmp(clients[i].nickname, client->nickname) == 0 && clients[i].state == STATE_RECONNECTING &&
+        clients[i].socket != client->socket)) {
             old_client = &clients[i];
             break;
         }
     }
+    printf("stop Search\n");
 
     if (old_client) {
 
@@ -702,7 +706,8 @@ void handle_reconnect_request(int new_socket, const char* nickname, struct Clien
         remove_client_from_room(old_client);
 
         // Если предыдущие состояния были PLAY или GOT_NUMBER, синхронизируем состояние с другими игроками в комнате
-        if (client->prev_state == STATE_GET_NUMBER || client->prev_state == STATE_GOT_TICKET) {
+        if (client->prev_state == STATE_GET_NUMBER || client->prev_state == STATE_GOT_TICKET
+        && &gameRooms[client->room_id].playerCount > 1) {
             struct GameRoom *room = &gameRooms[client->room_id];
             if (room) {
                 // Синхронизация состояния клиента с другими игроками в комнате
@@ -746,8 +751,13 @@ void process_command(struct Client *client, enum CommandType command, char *payl
         case CMD_REGISTER:
             if (client->state == STATE_REGISTER) {
 
-                strncpy(client->nickname, payload, MAX_NICKNAME_LEN - 1);
-                client->nickname[MAX_NICKNAME_LEN - 1] = '\0';
+                size_t copy_len = (length < MAX_NICKNAME_LEN - 1) ? length : MAX_NICKNAME_LEN - 1;
+
+                // Копируем только нужное количество байтов
+                strncpy(client->nickname, payload, copy_len);
+
+                // Завершаем строку нулевым байтом
+                client->nickname[copy_len] = '\0';
 
                 handle_reconnect_request(client->socket, client->nickname, client);
                 if (client->state == STATE_REGISTER) {
@@ -755,7 +765,7 @@ void process_command(struct Client *client, enum CommandType command, char *payl
                     printf("Client registered %s\n", client->nickname);
                 }else {
                     print_client_info(client);
-                    cmds_info(client);
+                    send_user_info(client);
                 }
 
 
@@ -820,7 +830,7 @@ void process_command(struct Client *client, enum CommandType command, char *payl
                 if (client->state == STATE_REGISTER){
                     process_command(client,CMD_REGISTER,payload,length);
                 }else{
-                    cmds_info(client);
+                    send_user_info(client);
                     printf("Reconnected\n");
                 }
 

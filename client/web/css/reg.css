@@ -1,0 +1,83 @@
+/* Основные стили */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+reg_body {
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #e3f9f0, #f9e3e3);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+/* Контейнер */
+.container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+/* Регистрационная форма */
+.registration-box {
+    background-color: #ffffff;
+    padding: 40px;
+    border-radius: 15px;
+    box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    max-width: 300px;
+    width: 100%;
+}
+
+.registration-box h1 {
+    font-size: 2em;
+    color: #ff6b6b;
+    margin-bottom: 20px;
+}
+
+.registration-box p {
+    font-size: 1.1em;
+    color: #4a4a4a;
+    margin-bottom: 15px;
+}
+
+/* Поле ввода */
+.registration-box input {
+    width: 100%;
+    padding: 12px;
+    margin: 10px 0;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    font-size: 1em;
+    outline: none;
+    transition: all 0.3s ease;
+}
+
+.registration-box input:focus {
+    border-color: #ff6b6b;
+}
+
+/* Кнопка */
+.registration-box button {
+    width: 100%;
+    padding: 12px;
+    background-color: #ff6b6b;
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 1.1em;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.registration-box button:hover {
+    background-color: #ff5252;
+}
+
+.registration-box button:active {
+    background-color: #e04848;
+}

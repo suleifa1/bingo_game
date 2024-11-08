@@ -3,9 +3,39 @@ import threading
 import struct
 import time
 from enum import Enum
-
+import eel
 
 RECONNECT_DELAY = 5
+
+MAX_NICKNAME_LEN = 20   # Максимальная длина ника (определите точное значение)
+TICKET_SIZE = 5        # Размер билета (определите точное значение)
+
+def unpack_client(data):
+    # Формат строки для struct.unpack
+    # s - строка байтов фиксированной длины, 32s - строка длиной 32 байта (например, для никнейма)
+    # i - целое число 4 байта
+    # I - беззнаковое целое число 4 байта
+    format_str = f'{MAX_NICKNAME_LEN}s i i i {TICKET_SIZE}i {TICKET_SIZE}i i i I I I'
+
+    # Распаковка данных согласно формату
+    unpacked_data = struct.unpack(format_str, data)
+
+    # Создаем словарь для удобного доступа к полям клиента
+    client_info = {
+        'nickname': unpacked_data[0].decode('utf-8', errors='ignore').split('\x00', 1)[0],
+        'socket': unpacked_data[1],
+        'state': unpacked_data[2],
+        'prev_state': unpacked_data[3],
+        'ticket': unpacked_data[4:4 + TICKET_SIZE],
+        'marked': unpacked_data[4 + TICKET_SIZE:4 + 2 * TICKET_SIZE],
+        'ticket_count': unpacked_data[4 + 2 * TICKET_SIZE],
+        'room_id': unpacked_data[4 + 2 * TICKET_SIZE + 1],
+        'last_ping': unpacked_data[4 + 2 * TICKET_SIZE + 2],
+        'last_pong': unpacked_data[4 + 2 * TICKET_SIZE + 3],
+        'disconnect_time': unpacked_data[4 + 2 * TICKET_SIZE + 4]
+    }
+
+    return client_info
 
 class Command(Enum):
     REGISTER = 0
@@ -22,8 +52,23 @@ class Command(Enum):
     PING = 12
     OK = 13
     END_GAME = 14
-    INFO = 15
+    USER_INFO = 15
     CMD_FINDGAME = 16
+
+class State(Enum):
+    STATE_REGISTER = 0
+    STATE_LOBBY = 1
+    STATE_RECONNECTING = 2
+    STATE_DISCONNECTED = 3
+
+    STATE_WAITING_FOR_GAME = 4
+
+    STATE_GOT_TICKET = 5
+    STATE_GET_NUMBER = 6
+    STATE_MARK_NUMBER = 7
+
+    STATE_BINGO_CHECK = 8
+
 
 class Client:
     def __init__(self, server_ip, server_port):
@@ -33,6 +78,8 @@ class Client:
         self.connected = False
         self.lock = threading.Lock()
         self.last_pong_time = time.time()
+        self.ticket = None
+        self.data = None
 
     def connect_to_server(self):
         while not self.connected:
@@ -44,7 +91,6 @@ class Client:
                 time.sleep(RECONNECT_DELAY)
 
     def start(self):
-        threading.Thread(target=self.connect_to_server, daemon=True).start()
         threading.Thread(target=self.receive_messages, daemon=True).start()
 
     def send_command(self, command, data=b''):
@@ -69,6 +115,7 @@ class Client:
         self.send_command(Command.BINGO)
 
     def ask_ticket(self):
+        print("ask tikect")
         self.send_command(Command.ASK_TICKET)
 
     def send_pong(self):
@@ -87,20 +134,33 @@ class Client:
             self.send_pong()  # Отправка PONG в ответ на PING
             self.last_pong_time = time.time()
         elif command == Command.SEND_TICKET:
-            ticket_numbers = struct.unpack(f"{len(payload) // 4}I", payload)
-            print(f"Ticket received: {ticket_numbers}")
+            self.ticket = struct.unpack(f"{len(payload) // 4}I", payload)
+            print(self.ticket)
+            eel.displayTicket(self.ticket, 0)
+
         elif command == Command.START_GAME:
+            eel.showPage('game-page')
+            print("denis " + str(self.ticket))
+            eel.displayTicket(self.ticket, 1)
             print("Game started.")
         elif command == Command.SEND_NUMBER:
             number = int.from_bytes(payload, 'little')
+            eel.updateCurrentNumber(number)
             print(f"Number received: {number}")
         elif command == Command.OK:
             print("Received OK from server.")
         elif command == Command.END_GAME:
+            eel.showPage('lobby')
             print("Game ended.")
-        elif command == Command.INFO:
-            info_text = payload.decode()
-            print(f"Info: {info_text}")
+        elif command == Command.USER_INFO:
+            self.data = unpack_client(payload)
+            print(self.data.get('state'))
+            if State(self.data.get('state')) == State.STATE_GOT_TICKET:
+                print("hello")
+                eel.showPage('waiting-room')
+                eel.displayTicket(self.data.get('ticket'))
+
+            print(f"Info: {self.data}")
         else:
             print("Unknown command received.")
 
@@ -126,5 +186,4 @@ class Client:
                     print("Unknown prefix")
             except socket.error:
                 self.connected = False
-                print("Disconnected")
                 time.sleep(RECONNECT_DELAY)

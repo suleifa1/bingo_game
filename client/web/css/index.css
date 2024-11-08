@@ -1,0 +1,273 @@
+/* Общие стили */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #e3f9f0, #f9e3e3);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+.container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+/* Стили страницы регистрации */
+.registration-box {
+    background-color: #ffffff;
+    padding: 40px;
+    border-radius: 15px;
+    box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    max-width: 300px;
+    width: 100%;
+}
+
+.registration-box h1 {
+    font-size: 2em;
+    color: #ff6b6b;
+    margin-bottom: 20px;
+}
+
+.registration-box p {
+    font-size: 1.1em;
+    color: #4a4a4a;
+    margin-bottom: 15px;
+}
+
+.registration-box input {
+    width: 100%;
+    padding: 12px;
+    margin: 10px 0;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    font-size: 1em;
+    outline: none;
+    transition: all 0.3s ease;
+}
+
+.registration-box input:focus {
+    border-color: #ff6b6b;
+}
+
+.registration-box button {
+    width: 100%;
+    padding: 12px;
+    background-color: #ff6b6b;
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 1.1em;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.registration-box button:hover {
+    background-color: #ff5252;
+}
+
+.registration-box button:active {
+    background-color: #e04848;
+}
+
+/* Стили лобби */
+.lobby-box {
+    background-color: #ffffff;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    max-width: 400px;
+    width: 100%;
+}
+
+.lobby-box h1 {
+    font-size: 2em;
+    color: #ff6b6b;
+    margin-bottom: 20px;
+}
+
+/* Действия (кнопки) для лобби и комнаты ожидания */
+.actions {
+    margin-bottom: 20px;
+}
+
+.actions button {
+    width: 100%;
+    padding: 12px;
+    margin: 8px 0;
+    background-color: #ff6b6b;
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 1em;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.actions button:hover {
+    background-color: #ff5252;
+}
+
+.actions button:active {
+    background-color: #e04848;
+}
+
+/* Правила игры в лобби */
+.rules {
+    margin-top: 20px;
+    padding-top: 10px;
+    border-top: 1px solid #ddd;
+}
+
+.rules h3 {
+    font-size: 1.2em;
+    color: #ff6b6b;
+    margin-bottom: 10px;
+}
+
+.rules p {
+    font-size: 0.9em;
+    color: #4a4a4a;
+}
+
+/* Стили комнаты ожидания */
+.room-box {
+    background-color: #ffffff;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    max-width: 400px;
+    width: 100%;
+}
+
+.room-box h1 {
+    font-size: 2em;
+    color: #ff6b6b;
+    margin-bottom: 20px;
+}
+
+/* Стили для билета */
+.ticket {
+    margin-top: 20px;
+    padding: 20px;
+    border-radius: 10px;
+    background-color: #f9f9f9;
+    box-shadow: 0px 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.hidden {
+    display: none;
+}
+
+.ticket h3 {
+    font-size: 1.5em;
+    color: #4a4a4a;
+    margin-bottom: 10px;
+}
+
+/* Сетка для билета 3x5 */
+.ticket-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr); /* 5 столбцов */
+    grid-template-rows: repeat(3, auto); /* 3 строки */
+    gap: 10px;
+}
+
+.ticket-cell {
+    background-color: #ffebcd;
+    color: #333;
+    font-size: 1.2em;
+    padding: 15px;
+    text-align: center;
+    border-radius: 5px;
+    border: 1px solid #ddd;
+}
+
+/* Игровая секция */
+.game-box {
+    background-color: #ffffff;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    max-width: 400px;
+    width: 100%;
+}
+
+.game-box h1 {
+    font-size: 2em;
+    color: #ff6b6b;
+    margin-bottom: 20px;
+}
+
+.current-number {
+    margin-bottom: 20px;
+}
+
+#number-display {
+    font-size: 3em;
+    color: #ff6b6b;
+    margin-top: 10px;
+    padding: 15px;
+    background-color: #f5f5f5;
+    border-radius: 10px;
+    box-shadow: 0px 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.bingo-button {
+    width: 100%;
+    padding: 15px;
+    background-color: #ff6b6b;
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 1.5em;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 20px;
+}
+
+.bingo-button:hover {
+    background-color: #ff5252;
+}
+
+.ticket {
+    margin-top: 20px;
+    padding: 20px;
+    border-radius: 10px;
+    background-color: #f9f9f9;
+    box-shadow: 0px 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.ticket h3 {
+    font-size: 1.5em;
+    color: #4a4a4a;
+    margin-bottom: 10px;
+}
+
+.ticket-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+}
+
+.ticket-cell {
+    background-color: #ffebcd;
+    color: #333;
+    font-size: 1.2em;
+    padding: 15px;
+    text-align: center;
+    border-radius: 5px;
+    border: 1px solid #ddd;
+}
