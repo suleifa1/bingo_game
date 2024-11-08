@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Клиентское приложение</title>
+    <script type="text/javascript" src="/eel.js"></script>
+</head>
+<body>
+    <h1>Клиентское приложение</h1>
+    <div>
+        <label for="nickname">Введите никнейм:</label>
+        <input type="text" id="nickname" />
+        <button onclick="register()">Зарегистрироваться</button>
+    </div>
+    <div>
+        <button onclick="findGame()">Найти игру</button>
+        <button onclick="markNumber()">Отметить номер</button>
+        <button onclick="bingoCheck()">Проверить Бинго</button>
+        <button onclick="askTicket()">Запросить билет</button>
+        <button onclick="disconnect()">Отключиться</button>
+    </div>
+    <div>
+        <h2>Статус: <span id="status">Отключен</span></h2>
+    </div>
+    <div id="messages" style="border: 1px solid #000; height: 200px; overflow-y: scroll;"></div>
+
+    <script type="text/javascript">
+        async function register() {
+            let nickname = document.getElementById("nickname").value;
+            await eel.register(nickname)();
+        }
+
+        async function findGame() {
+            await eel.find_game()();
+        }
+
+        async function markNumber() {
+            let number = prompt("Введите номер для отметки:");
+            if (number) {
+                await eel.mark_number(parseInt(number))();
+            }
+        }
+
+        async function bingoCheck() {
+            await eel.bingo_check()();
+        }
+
+        async function askTicket() {
+            await eel.ask_ticket()();
+        }
+
+        async function disconnect() {
+            await eel.disconnect()();
+        }
+
+        // Функция для обновления статуса
+        function update_status(status) {
+            document.getElementById("status").innerText = status;
+        }
+
+        // Функция для добавления сообщений в лог
+        function log_message(message) {
+            let messagesDiv = document.getElementById("messages");
+            messagesDiv.innerHTML += `<p>${message}</p>`;
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        // Экспорт функций для вызова из Python
+        eel.expose(update_status);
+        eel.expose(log_message);
+    </script>
+</body>
+</html>

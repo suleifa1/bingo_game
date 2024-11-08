@@ -2,8 +2,8 @@ import socket
 import threading
 import struct
 import time
-import eel
 from enum import Enum
+
 
 RECONNECT_DELAY = 5
 
@@ -40,8 +40,6 @@ class Client:
                 self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 self.socket.connect((self.server_ip, self.server_port))
                 self.connected = True
-                eel.update_status("Connected")
-                eel.log_message("Successfully connected to the server.")
             except socket.error:
                 time.sleep(RECONNECT_DELAY)
 
@@ -54,9 +52,7 @@ class Client:
         with self.lock:
             try:
                 self.socket.sendall(header + data)
-                eel.log_message(f"Sent {command.name} command")
             except socket.error:
-                eel.log_message(f"Failed to send command {command.name}")
                 self.connected = False
 
     def register(self, nickname):
@@ -75,33 +71,38 @@ class Client:
     def ask_ticket(self):
         self.send_command(Command.ASK_TICKET)
 
+    def send_pong(self):
+        """Отправляет PONG сообщение серверу для ответа на PING."""
+        self.send_command(Command.PONG)
+        print("Sent PONG in response to PING")
+
     def disconnect(self):
         self.connected = False
         if self.socket:
             self.socket.close()
-            eel.update_status("Disconnected")
+            print("Disconnected")
 
     def process_payload(self, command, payload):
         if command == Command.PING:
-            self.send_pong()
+            self.send_pong()  # Отправка PONG в ответ на PING
             self.last_pong_time = time.time()
         elif command == Command.SEND_TICKET:
             ticket_numbers = struct.unpack(f"{len(payload) // 4}I", payload)
-            eel.log_message(f"Ticket received: {ticket_numbers}")
+            print(f"Ticket received: {ticket_numbers}")
         elif command == Command.START_GAME:
-            eel.log_message("Game started.")
+            print("Game started.")
         elif command == Command.SEND_NUMBER:
             number = int.from_bytes(payload, 'little')
-            eel.log_message(f"Number received: {number}")
+            print(f"Number received: {number}")
         elif command == Command.OK:
-            eel.log_message("Received OK from server.")
+            print("Received OK from server.")
         elif command == Command.END_GAME:
-            eel.log_message("Game ended.")
+            print("Game ended.")
         elif command == Command.INFO:
             info_text = payload.decode()
-            eel.log_message(f"Info: {info_text}")
+            print(f"Info: {info_text}")
         else:
-            eel.log_message("Unknown command received.")
+            print("Unknown command received.")
 
     def receive_messages(self):
         while True:
@@ -122,8 +123,8 @@ class Client:
                     payload = self.socket.recv(length) if length > 0 else b''
                     self.process_payload(Command(command), payload)
                 else:
-                    eel.log_message("Unknown prefix")
+                    print("Unknown prefix")
             except socket.error:
                 self.connected = False
-                eel.update_status("Disconnected")
+                print("Disconnected")
                 time.sleep(RECONNECT_DELAY)
