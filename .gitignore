@@ -4,3 +4,4 @@
 /server/cmake-build-debug
 *.iml
 *.xml
+*.pyc
