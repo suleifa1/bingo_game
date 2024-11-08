@@ -17,12 +17,12 @@
 #define TIMEOUT 15
 #define RECONNECT_TIMEOUT 30
 #define MAX_NICKNAME_LEN 20
-#define MAX_ROOMS (MAX_CLIENTS / 4)
+#define MAX_ROOMS (MAX_CLIENTS / 3)
 #define MAX_NUMBERS 40
-
 
 enum ClientState {
     STATE_REGISTER,
+    STATE_LOBBY,
     STATE_RECONNECTING,
     STATE_DISCONNECTED,
 
@@ -63,6 +63,7 @@ enum CommandType {
     CMDS_OK,
     CMDS_END_GAME,
     CMDS_INFO,
+    CMD_FINDGAME,
     TOTAL_CMDS
 };
 
@@ -107,6 +108,7 @@ int buffer_to_int(const void *buffer) {
 }
 
 void print_client_info(const struct Client *client) {
+    if(client->state == STATE_DISCONNECTED) return;
     printf("\n--- Client Info ---\n");
     printf("Nickname: %s\n", client->nickname);
     printf("Socket FD: %d\n", client->socket);
@@ -161,7 +163,7 @@ int initialize_server(struct sockaddr_in *address) {
         exit(EXIT_FAILURE);
     }
 
-    printf("Server initialized and listening on port %d...\n", PORT);
+    printf("Server initialized and listening on %s:%d...\n", inet_ntoa(address->sin_addr), PORT);
     return server_socket;
 }
 
@@ -191,6 +193,22 @@ void initialize_clients() {
 }
 /// {client functions}
 
+void send_number(struct Client *client, int number) {
+    struct MessageHeader header = {"SP", CMDS_SEND_NUMBER, sizeof(number)};
+    if (send(client->socket, &header, sizeof(header), 0) < 0) {
+        perror("Failed to send number header");
+        return;
+    }
+
+    if (send(client->socket, &number, sizeof(number), 0) < 0) {
+        perror("Failed to send number");
+    } else {
+        printf("Number %d sent to client %s\n", number, client->nickname);
+    }
+
+    // Переводим клиента в состояние STATE_MARK_NUMBER
+    client->state = STATE_MARK_NUMBER;
+}
 
 
 /// {room functions}
@@ -310,7 +328,6 @@ void start_game_in_room(int room_id) {
 void manage_game_play(struct GameRoom *room) {
     time_t current_time = time(NULL);
     int bingo_found;
-
     switch (room->gameState) {
         case GAME_SEND_NUMBER:
             if (room->totalAvailableNumbers > 0) {
@@ -322,21 +339,12 @@ void manage_game_play(struct GameRoom *room) {
                 // Отправка номера всем игрокам в комнате и перевод их в STATE_MARK_NUMBER
                 for (int i = 0; i < room->playerCount; i++) {
                     struct Client *client = room->players[i];
-                    struct MessageHeader number_msg = {"SP", CMDS_SEND_NUMBER, sizeof(number)};
-                    if (send(client->socket, &number_msg, sizeof(number_msg), 0) < 0) {
-                        perror("Failed to send number message");
-                    }
-                    if (send(client->socket, &number, sizeof(number), 0) < 0) {
-                        perror("Failed to send number");
-                    }else {
-                        printf("Number sent to client %s\n", client->nickname);
-                    }
-                    client->state = STATE_MARK_NUMBER;
+                    send_number(client,number);
                 }
 
                 // Переход к состоянию ожидания отметки
                 room->gameState = GAME_WAIT_FOR_MARK;
-                room->unpause = current_time + 20; // Устанавливаем паузу на 20 секунд
+                room->unpause = current_time + 5; // Устанавливаем паузу на 20 секунд
             } else {
                 // Если нет доступных номеров, проверяем, можно ли завершить игру
                 room->gameState = GAME_FINISH;
@@ -425,11 +433,6 @@ void manage_game_play(struct GameRoom *room) {
             }
             break;
 
-        case GAME_FINISH:
-            // Завершение игры, можно добавить логику сброса состояния игроков и комнаты
-            printf("Game finished in room %d\n", room->roomId);
-            break;
-
         default:
             break;
     }
@@ -439,7 +442,7 @@ void end_game_in_room(struct GameRoom *room) {
     // Обнуляем состояние игроков и переводим их в начальное состояние
     for (int i = 0; i < room->playerCount; i++) {
         struct Client *client = room->players[i];
-        client->state = STATE_WAITING_FOR_GAME;
+        client->state = STATE_LOBBY;
         memset(client->marked, 0, sizeof(client->marked));
         client->ticket_count = 0;
     }
@@ -448,6 +451,7 @@ void end_game_in_room(struct GameRoom *room) {
     room->gameState = GAME_WAITING;
     room->totalNumbersCalled = 0;
     room->totalAvailableNumbers = 0;
+    room->playerCount = 0;
     memset(room->calledNumbers, 0, sizeof(room->calledNumbers));
     memset(room->availableNumbers, 0, sizeof(room->availableNumbers));
     printf("Game finished in room %d, resetting room\n", room->roomId);
@@ -475,23 +479,29 @@ void manage_game_rooms() {
                         break;
                     }
                 }
-                printf("count of players in room: %d, ready: %s\n",room->playerCount, all_ready == 1 ? "true":"false");
+                //printf("count of players in room: %d, ready: %s\n",room->playerCount, all_ready == 1 ? "true":"false");
 
                 // Если все игроки готовы, начинаем игру
                 if (all_ready) {
                     start_game_in_room(room_index);
                 }
-            break;
+                break;
 
+            case GAME_WAIT_FOR_MARK:
+            case GAME_CHECK_BINGO:
+            case GAME_SEND_NUMBER:
             case GAME_PLAY:
                 // Управление процессом игры
-                    manage_game_play(room);
-            break;
+                if(room->gameState == GAME_PLAY) room->gameState = GAME_SEND_NUMBER;
+
+                printf("dDENISADASDASDASD\n");
+                manage_game_play(room);
+                break;
 
             case GAME_FINISH:
                 // Завершение игры и обнуление состояния комнаты
-                    end_game_in_room(room);
-            break;
+                end_game_in_room(room);
+                break;
 
             default:
                 break;
@@ -579,7 +589,7 @@ void send_ping(int client_index) {
         perror("Failed to send PING");
     } else {
         clients[client_index].last_ping = time(NULL);
-        printf("PING %d\n", clients[client_index].socket);
+        //printf("PING %d\n", clients[client_index].socket);
     }
 }
 
@@ -657,7 +667,7 @@ void handle_reconnect_timeout(int client_index) {
     time_t now = time(NULL);
 
     // Проверяем, истекло ли время на реконнект
-    if (now - clients[client_index].disconnect_time >= RECONNECT_TIMEOUT) {
+    if (now - clients[client_index].disconnect_time >= RECONNECT_TIMEOUT && clients[client_index].disconnect_time != 0) {
         printf("Client %d failed to reconnect in time, marking as disconnected\n", clients[client_index].socket);
         close(clients[client_index].socket);
         remove_client_from_room(&clients[client_index]);
@@ -668,9 +678,11 @@ void handle_reconnect_timeout(int client_index) {
 void handle_reconnect_request(int new_socket, const char* nickname, struct Client *client) {
     struct Client* old_client = NULL;
 
+
     // Ищем клиента в RECONNECTING по нику
     for (int i = 0; i < MAX_CLIENTS; i++) {
-        if (strcmp(clients[i].nickname, nickname) == 0 && clients[i].state == STATE_RECONNECTING) {
+        print_client_info(&clients[i]);
+        if ((strcmp(clients[i].nickname, nickname) == 0 && clients[i].state == STATE_RECONNECTING )) {
             old_client = &clients[i];
             break;
         }
@@ -686,6 +698,8 @@ void handle_reconnect_request(int new_socket, const char* nickname, struct Clien
         client->last_ping = time(NULL);
         client->last_pong = time(NULL);
         client->disconnect_time = 0;
+
+        remove_client_from_room(old_client);
 
         // Если предыдущие состояния были PLAY или GOT_NUMBER, синхронизируем состояние с другими игроками в комнате
         if (client->prev_state == STATE_GET_NUMBER || client->prev_state == STATE_GOT_TICKET) {
@@ -719,6 +733,7 @@ void handle_reconnect_request(int new_socket, const char* nickname, struct Clien
         // Обнуляем старый клиент
         initialize_single_client(old_client);
 
+
     } else {
         printf("Reconnect failed: client %s not found in RECONNECTING state\n", nickname);
         //close(new_socket);  // Закрываем неподключённый сокет
@@ -736,19 +751,33 @@ void process_command(struct Client *client, enum CommandType command, char *payl
 
                 handle_reconnect_request(client->socket, client->nickname, client);
                 if (client->state == STATE_REGISTER) {
-                    assign_client_to_room(client);
+                    client->state = STATE_LOBBY;
+                    printf("Client registered %s\n", client->nickname);
                 }else {
+                    print_client_info(client);
                     cmds_info(client);
                 }
 
 
                 // ?? send_ok(client->socket);
 
-                printf("Client registered and waiting for game %s\n", client->nickname);
+
             } else {
                 printf("Client in invalid state for registration\n");
             }
             break;
+
+        case CMD_FINDGAME:
+            if (client->state == STATE_LOBBY) {
+                assign_client_to_room(client);
+                // ?? send_ok(client->socket);
+
+                printf("Client asigned to room  %s\n", client->nickname);
+            } else {
+                printf("Client in invalid state for find a game\n");
+            }
+            break;
+
         case CMD_ASK_TICKET:
             if (client->state == STATE_WAITING_FOR_GAME) {
                 generate_ticket(client);
@@ -775,7 +804,7 @@ void process_command(struct Client *client, enum CommandType command, char *payl
             } else {
                 printf("Client in invalid state for CMD_MARK_NUMBER\n");
             }
-        break;
+            break;
 
         case CMD_BINGO:
             if (client->state == STATE_BINGO_CHECK) {
@@ -788,8 +817,13 @@ void process_command(struct Client *client, enum CommandType command, char *payl
         case CMD_RECONNECT:
             if (client->state == STATE_REGISTER) {
                 handle_reconnect_request(client->socket,payload,client);
-                cmds_info(client);
-                printf("Reconnected\n");
+                if (client->state == STATE_REGISTER){
+                    process_command(client,CMD_REGISTER,payload,length);
+                }else{
+                    cmds_info(client);
+                    printf("Reconnected\n");
+                }
+
             } else {
                 printf("Client in invalid state for CMD_RECONNECT\n");
             }
@@ -837,8 +871,11 @@ int recv_all(struct Client *client, char *buffer, int length) {
                 printf("Client %s is now in STATE_RECONNECTING\n", client->nickname);
             } else {
                 // Клиент в других состояниях просто переводится в STATE_DISCONNECTED
+                printf("client state disc: %d\n", client->state);
+                remove_client_from_room(client);
                 close(client->socket);
                 initialize_single_client(client);
+
                 printf("Client %s is now in STATE_DISCONNECTED\n", client->nickname);
             }
 
@@ -928,6 +965,7 @@ int main(void) {
         }
 
         for (int i = 0; i < MAX_CLIENTS; i++) {
+
             sd = clients[i].socket;
             if (FD_ISSET(sd, &readfds)) {
                 // Process client data
@@ -938,6 +976,7 @@ int main(void) {
 
         }
         manage_game_rooms();
+
     }
 
     return 0;
