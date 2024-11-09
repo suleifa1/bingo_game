@@ -37,6 +37,52 @@ def unpack_client(data):
 
     return client_info
 
+def unpack_room_info(data):
+    MAX_NICKNAME_LEN = 20
+    MAX_PLAYERS_IN_ROOM = 3
+    MAX_NUMBERS = 40
+
+    format_str = f'<iii{MAX_PLAYERS_IN_ROOM * MAX_NICKNAME_LEN}s{MAX_NUMBERS}iii'
+
+    expected_size = struct.calcsize(format_str)
+    if len(data) != expected_size:
+        raise ValueError(f"Data size mismatch. Expected {expected_size} bytes, got {len(data)} bytes.")
+
+    unpacked_data = struct.unpack(format_str, data)
+
+    room_id = unpacked_data[0]
+    game_state = unpacked_data[1]
+    player_count = unpacked_data[2]
+
+    nicknames_data = unpacked_data[3]
+    player_nicknames = []
+    for i in range(MAX_PLAYERS_IN_ROOM):
+        start = i * MAX_NICKNAME_LEN
+        end = start + MAX_NICKNAME_LEN
+        nickname_bytes = nicknames_data[start:end]
+        nickname = nickname_bytes.decode('utf-8', errors='ignore').split('\x00', 1)[0]
+        if nickname:
+            player_nicknames.append(nickname)
+
+    called_numbers = list(unpacked_data[4 : 4 + MAX_NUMBERS])
+
+    total_numbers_called = unpacked_data[4 + MAX_NUMBERS]
+    unpause = unpacked_data[5 + MAX_NUMBERS]
+
+    room_info = {
+        'roomId': room_id,
+        'gameState': game_state,
+        'playerCount': player_count,
+        'playerNicknames': player_nicknames[:player_count],
+        'calledNumbers': called_numbers[:total_numbers_called],
+        'totalNumbersCalled': total_numbers_called,
+        'unpause': unpause
+    }
+
+    return room_info
+
+
+
 class Command(Enum):
     REGISTER = 0
     READY = 1
@@ -54,6 +100,7 @@ class Command(Enum):
     END_GAME = 14
     USER_INFO = 15
     CMD_FINDGAME = 16
+    ROOM_INFO = 17
 
 class State(Enum):
     STATE_REGISTER = 0
@@ -150,17 +197,33 @@ class Client:
         elif command == Command.OK:
             print("Received OK from server.")
         elif command == Command.END_GAME:
+            eel.clearTicket()
             eel.showPage('lobby')
+            self.ticket = None
+            self.data = None
             print("Game ended.")
         elif command == Command.USER_INFO:
             self.data = unpack_client(payload)
             print(self.data.get('state'))
             if State(self.data.get('state')) == State.STATE_GOT_TICKET:
-                print("hello")
                 eel.showPage('waiting-room')
                 eel.displayTicket(self.data.get('ticket'))
 
+            elif (State(self.data.get('state')) == State.STATE_GET_NUMBER or
+                  State(self.data.get('state')) == State.STATE_MARK_NUMBER or
+                  State(self.data.get('state')) == State.STATE_BINGO_CHECK):
+                eel.showPage('game-page')
+                eel.displayTicket(self.data.get('ticket'), 1)
+
+            elif State(self.data.get('state')) == State.STATE_REGISTER:
+                eel.showPage('registration')
+
+            elif State(self.data.get('state')) == State.STATE_LOBBY:
+                eel.showPage("lobby")
+
             print(f"Info: {self.data}")
+        elif command == Command.ROOM_INFO:
+            print(unpack_room_info(payload))
         else:
             print("Unknown command received.")
 

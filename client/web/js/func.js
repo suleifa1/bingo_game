@@ -1,6 +1,7 @@
    // Асинхронная функция для регистрации
 
    // Экспорт функций для вызова из Python
+    eel.expose(clearTicket);
     eel.expose(displayTicket);
     eel.expose(showPage);
     eel.expose(updateCurrentNumber);
@@ -8,7 +9,6 @@
     async function register() {
         let nickname = document.getElementById("nickname").value;
         await eel.register(nickname)();
-        showPage("lobby");
     }
 
     async function findGame() {
@@ -29,7 +29,6 @@
 
     async function askTicket() {
         await eel.ask_ticket()();
-        document.getElementById("get_button").remove();
     }
 
     function displayTicket(numbers, isGame) {
@@ -40,9 +39,9 @@
         else {
             ticketElement = document.getElementsByClassName("ticket")[0];
         }
-        const grid = ticketElement.querySelector(".ticket-grid");
 
-        grid.innerHTML = '';  // Очищаем предыдущее содержимое
+        const grid = ticketElement.querySelector(".ticket-grid");
+        grid.innerHTML = '';
 
         numbers.forEach(number => {
             const cell = document.createElement("div");
@@ -51,7 +50,21 @@
             grid.appendChild(cell);
         });
 
+        document.getElementById("get_button").classList.toggle("hidden");
         ticketElement.classList.remove("hidden");  // Показываем билет
+    }
+    
+    function clearTicket(isGame){
+        let ticketElement;
+        if (isGame){
+            ticketElement = document.getElementsByClassName("ticket")[1];
+        }
+        else {
+            ticketElement = document.getElementsByClassName("ticket")[0];
+        }
+
+        const grid = ticketElement.querySelector(".ticket-grid");
+        grid.innerHTML = ''; 
     }
 
     async function disconnect() {

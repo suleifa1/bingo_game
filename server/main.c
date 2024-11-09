@@ -18,6 +18,7 @@
 #define RECONNECT_TIMEOUT 30
 #define MAX_NICKNAME_LEN 20
 #define MAX_ROOMS (MAX_CLIENTS / 3)
+#define MAX_PLAYERS_IN_ROOM (MAX_CLIENTS / MAX_ROOMS)
 #define MAX_NUMBERS 40
 
 enum ClientState {
@@ -93,6 +94,17 @@ struct GameRoom {
     int totalAvailableNumbers;
     int unpause;
 };
+
+struct RoomInfo {
+    int roomId;
+    int gameState;
+    int playerCount;
+    char playerNicknames[MAX_PLAYERS_IN_ROOM][MAX_NICKNAME_LEN];
+    int calledNumbers[MAX_NUMBERS];
+    int totalNumbersCalled;
+    int unpause;
+} __attribute__((packed));
+
 
 struct MessageHeader {
     char prefix[2];
@@ -194,6 +206,51 @@ void initialize_clients() {
 }
 /// {client functions}
 
+
+void send_room_info(struct Client *client) {
+    if (client->room_id == -1) {
+        printf("Client %s is not in any room\n", client->nickname);
+        return;
+    }
+
+    struct GameRoom *room = &gameRooms[client->room_id];
+    struct RoomInfo roomInfo;
+
+    // Заполняем структуру RoomInfo
+    roomInfo.roomId = room->roomId;
+    roomInfo.gameState = room->gameState;
+    roomInfo.playerCount = room->playerCount;
+    roomInfo.totalNumbersCalled = room->totalNumbersCalled;
+    roomInfo.unpause =room->unpause;
+
+    // Копируем никнеймы игроков
+    for (int i = 0; i < room->playerCount; i++) {
+        strncpy(roomInfo.playerNicknames[i], room->players[i]->nickname, MAX_NICKNAME_LEN);
+        roomInfo.playerNicknames[i][MAX_NICKNAME_LEN - 1] = '\0';  // Обеспечиваем нуль-терминацию
+    }
+
+    // Копируем вызванные номера и конвертируем их в сетевой порядок байтов
+    for (int i = 0; i < room->totalNumbersCalled; i++) {
+        roomInfo.calledNumbers[i] = room->calledNumbers[i];
+    }
+
+    // Создаем заголовок сообщения
+    struct MessageHeader header = {"SP", CMDS_ROOM_INFO, sizeof(struct RoomInfo)};
+
+    // Отправляем заголовок
+    if (send(client->socket, &header, sizeof(header), 0) < 0) {
+        perror("Failed to send room info header");
+        return;
+    }
+
+
+    if (send(client->socket, &roomInfo, sizeof(roomInfo), 0) < 0) {
+        perror("Failed to send room info");
+    } else {
+        printf("Room info sent to client %s\n", client->nickname);
+    }
+}
+
 void send_number(struct Client *client, int number) {
     struct MessageHeader header = {"SP", CMDS_SEND_NUMBER, sizeof(number)};
     if (send(client->socket, &header, sizeof(header), 0) < 0) {
@@ -274,6 +331,25 @@ void remove_client_from_room(struct Client *client) {
     client->room_id = -1;
 }
 
+void replace_client_in_room(struct Client *old_client, struct Client *new_client) {
+    if (old_client->room_id == -1) return;
+
+    struct GameRoom *room = &gameRooms[old_client->room_id];
+
+    // Находим старого клиента в массиве игроков комнаты и заменяем на нового
+    for (int i = 0; i < room->playerCount; i++) {
+        if (room->players[i] == old_client) {
+            room->players[i] = new_client;
+            printf("Replaced client %s with %s in room %d\n", old_client->nickname, new_client->nickname, old_client->room_id);
+            return;
+        }
+    }
+
+    // Если старый клиент не найден в комнате
+    printf("Old client %s not found in room %d\n", old_client->nickname, old_client->room_id);
+}
+
+
 void generate_available_numbers(struct GameRoom *room) {
     room->totalAvailableNumbers = 0;
     for (int i = 0; i < room->playerCount; i++) {
@@ -345,7 +421,7 @@ void manage_game_play(struct GameRoom *room) {
 
                 // Переход к состоянию ожидания отметки
                 room->gameState = GAME_WAIT_FOR_MARK;
-                room->unpause = current_time + 5; // Устанавливаем паузу на 20 секунд
+                room->unpause = current_time + 2; // Устанавливаем паузу на 20 секунд
             } else {
                 // Если нет доступных номеров, проверяем, можно ли завершить игру
                 room->gameState = GAME_FINISH;
@@ -439,6 +515,17 @@ void manage_game_play(struct GameRoom *room) {
     }
 }
 
+void send_end_game(int client_index) {
+    struct MessageHeader end_game = {"SP", CMDS_END_GAME, 0};
+
+    if (send(clients[client_index].socket, &end_game, sizeof(end_game), 0) < 0) {
+        perror("Failed to send end_game");
+    } else {
+        clients[client_index].last_ping = time(NULL);
+        //printf("PING %d\n", clients[client_index].socket);
+    }
+}
+
 void end_game_in_room(struct GameRoom *room) {
     // Обнуляем состояние игроков и переводим их в начальное состояние
     for (int i = 0; i < room->playerCount; i++) {
@@ -446,6 +533,7 @@ void end_game_in_room(struct GameRoom *room) {
         client->state = STATE_LOBBY;
         memset(client->marked, 0, sizeof(client->marked));
         client->ticket_count = 0;
+        send_end_game(i);
     }
 
     // Сброс состояния комнаты
@@ -457,6 +545,9 @@ void end_game_in_room(struct GameRoom *room) {
     memset(room->availableNumbers, 0, sizeof(room->availableNumbers));
     printf("Game finished in room %d, resetting room\n", room->roomId);
 }
+
+
+
 
 void manage_game_rooms() {
     for (int room_index = 0; room_index < MAX_ROOMS; room_index++) {
@@ -471,6 +562,7 @@ void manage_game_rooms() {
         // Управляем состоянием комнаты в зависимости от текущего состояния игры
         switch (room->gameState) {
             case GAME_WAITING:
+
                 // Проверяем, готовы ли все игроки в комнате
                 all_ready = 1;
                 for (int i = 0; i < room->playerCount; i++) {
@@ -485,7 +577,14 @@ void manage_game_rooms() {
                 // Если все игроки готовы, начинаем игру
                 if (all_ready) {
                     start_game_in_room(room_index);
+                }else{
+                    for (int i = 0; i < room->playerCount; i++) {
+                        send_room_info(room->players[i]);
+                    }
+
                 }
+
+
                 break;
 
             case GAME_WAIT_FOR_MARK:
@@ -495,13 +594,19 @@ void manage_game_rooms() {
                 // Управление процессом игры
                 if(room->gameState == GAME_PLAY) room->gameState = GAME_SEND_NUMBER;
 
-                printf("dDENISADASDASDASD\n");
+                for (int i = 0; i < room->playerCount; i++) {
+                    send_room_info(room->players[i]);
+                }
                 manage_game_play(room);
                 break;
 
             case GAME_FINISH:
+                for (int i = 0; i < room->playerCount; i++) {
+                    send_room_info(room->players[i]);
+                }
                 // Завершение игры и обнуление состояния комнаты
                 end_game_in_room(room);
+
                 break;
 
             default:
@@ -610,6 +715,7 @@ void add_new_client(int new_socket, struct sockaddr_in *address) {
 
             printf("Added new client with socket %d at index %d (IP %s, PORT %d)\n",
                    new_socket, i, inet_ntoa(address->sin_addr), ntohs(address->sin_port));
+            send_user_info(&clients[i]);
             added = 1;
             break;
         }
@@ -703,11 +809,13 @@ void handle_reconnect_request(int new_socket, const char* nickname, struct Clien
         client->last_pong = time(NULL);
         client->disconnect_time = 0;
 
-        remove_client_from_room(old_client);
+        replace_client_in_room(old_client,client);
+
 
         // Если предыдущие состояния были PLAY или GOT_NUMBER, синхронизируем состояние с другими игроками в комнате
         if (client->prev_state == STATE_GET_NUMBER || client->prev_state == STATE_GOT_TICKET
         && &gameRooms[client->room_id].playerCount > 1) {
+
             struct GameRoom *room = &gameRooms[client->room_id];
             if (room) {
                 // Синхронизация состояния клиента с другими игроками в комнате
@@ -765,8 +873,8 @@ void process_command(struct Client *client, enum CommandType command, char *payl
                     printf("Client registered %s\n", client->nickname);
                 }else {
                     print_client_info(client);
-                    send_user_info(client);
                 }
+                send_user_info(client);
 
 
                 // ?? send_ok(client->socket);
