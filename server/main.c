@@ -216,26 +216,36 @@ void send_room_info(struct Client *client) {
     struct GameRoom *room = &gameRooms[client->room_id];
     struct RoomInfo roomInfo;
 
-    // Заполняем структуру RoomInfo
+    // Заполняем общую информацию о комнате
     roomInfo.roomId = room->roomId;
     roomInfo.gameState = room->gameState;
-    roomInfo.playerCount = room->playerCount;
     roomInfo.totalNumbersCalled = room->totalNumbersCalled;
-    roomInfo.unpause =room->unpause;
+    roomInfo.unpause = room->unpause;
 
-    // Копируем никнеймы игроков
+    // Инициализируем счетчик активных игроков
+    int activePlayerCount = 0;
+
+    // Копируем никнеймы только тех игроков, которые не находятся в состоянии STATE_RECONNECTING
     for (int i = 0; i < room->playerCount; i++) {
-        strncpy(roomInfo.playerNicknames[i], room->players[i]->nickname, MAX_NICKNAME_LEN);
-        roomInfo.playerNicknames[i][MAX_NICKNAME_LEN - 1] = '\0';  // Обеспечиваем нуль-терминацию
+        struct Client *player = room->players[i];
+        if (player->state != STATE_RECONNECTING) {
+            strncpy(roomInfo.playerNicknames[activePlayerCount], player->nickname, MAX_NICKNAME_LEN);
+            roomInfo.playerNicknames[activePlayerCount][MAX_NICKNAME_LEN - 1] = '\0';  // Обеспечиваем нуль-терминацию
+            activePlayerCount++;
+        }
     }
 
-    // Копируем вызванные номера и конвертируем их в сетевой порядок байтов
+    // Устанавливаем количество активных игроков
+    roomInfo.playerCount = activePlayerCount;
+
+    // Копируем вызванные номера
     for (int i = 0; i < room->totalNumbersCalled; i++) {
         roomInfo.calledNumbers[i] = room->calledNumbers[i];
     }
 
-    // Создаем заголовок сообщения
-    struct MessageHeader header = {"SP", CMDS_ROOM_INFO, sizeof(struct RoomInfo)};
+    // Создаем заголовок сообщения с обновленным размером полезной нагрузки
+    int payloadSize = sizeof(struct RoomInfo);
+    struct MessageHeader header = {"SP", CMDS_ROOM_INFO, payloadSize};
 
     // Отправляем заголовок
     if (send(client->socket, &header, sizeof(header), 0) < 0) {
@@ -243,8 +253,8 @@ void send_room_info(struct Client *client) {
         return;
     }
 
-
-    if (send(client->socket, &roomInfo, sizeof(roomInfo), 0) < 0) {
+    // Отправляем данные о комнате
+    if (send(client->socket, &roomInfo, payloadSize, 0) < 0) {
         perror("Failed to send room info");
     } else {
         printf("Room info sent to client %s\n", client->nickname);

@@ -11,7 +11,7 @@
 <body>
 
     <!-- Страница регистрации -->
-    <section id="registration" class="page ">
+    <section id="registration" class="page hidden">
         <div class="container">
             <div class="registration-box">
                 <h1>Добро пожаловать в Bingo!</h1>
@@ -62,21 +62,37 @@
                         <!-- Номера билета будут добавлены сюда -->
                     </div>
                 </div>
+
+                                <!-- Область для последних сообщений чата -->
+                <div id="system-messages" class="system-messages">
+                    <!-- Сообщения будут добавляться сюда -->
+                </div>
+
             </div>
         </div>
     </section>
 
-<!-- Игровая секция -->
-    <section id="game-page" class="page hidden">
+    <!-- Игровая секция -->
+    <section id="game-page" class="page ">
         <div class="container">
             <div class="game-box">
                 <h1>Игра Bingo</h1>
+
+
+                <div class="called-numbers">
+                    <h3>Вызванные номера:</h3>
+                    <div id="called-numbers-list" class="numbers-list">
+                        <!-- Вызванные номера будут добавлены сюда -->
+                    </div>
+                </div>
 
                 <!-- Показ текущего номера -->
                 <div class="current-number">
                     <h2>Текущий номер:</h2>
                     <div id="number-display">--</div>
                 </div>
+
+
 
                 <!-- Карточка игрока -->
                 <div class="ticket">
@@ -88,6 +104,9 @@
 
                 <!-- Кнопка для бинго -->
                 <button class="bingo-button" onclick="declareBingo()">Бинго!</button>
+
+
+
             </div>
         </div>
     </section>

@@ -10,6 +10,36 @@ RECONNECT_DELAY = 5
 MAX_NICKNAME_LEN = 20   # Максимальная длина ника (определите точное значение)
 TICKET_SIZE = 5        # Размер билета (определите точное значение)
 
+previous_player_nicknames = []
+
+def handle_room_update(room_info):
+    global previous_player_nicknames
+
+    current_player_nicknames = room_info['playerNicknames']
+
+    # Если это первый вызов, инициализируем список и выходим
+    if not previous_player_nicknames:
+        previous_player_nicknames = current_player_nicknames.copy()
+        return
+
+    # Преобразуем списки никнеймов в множества для удобства сравнения
+    previous_players = set(previous_player_nicknames)
+    current_players = set(current_player_nicknames)
+
+    # Определяем новых подключившихся игроков
+    connected_players = current_players - previous_players
+    for nickname in connected_players:
+        eel.showSystemMessage(f"Игрок {nickname} подключился.")
+
+    # Определяем игроков, которые отключились
+    disconnected_players = previous_players - current_players
+    for nickname in disconnected_players:
+        eel.showSystemMessage(f"Игрок {nickname} отключился.")
+
+    # Обновляем предыдущий список игроков
+    previous_player_nicknames = current_player_nicknames.copy()
+
+
 def unpack_client(data):
     # Формат строки для struct.unpack
     # s - строка байтов фиксированной длины, 32s - строка длиной 32 байта (например, для никнейма)
@@ -80,8 +110,6 @@ def unpack_room_info(data):
     }
 
     return room_info
-
-
 
 class Command(Enum):
     REGISTER = 0
@@ -223,7 +251,11 @@ class Client:
 
             print(f"Info: {self.data}")
         elif command == Command.ROOM_INFO:
-            print(unpack_room_info(payload))
+            room_info = unpack_room_info(payload)
+            handle_room_update(room_info)
+            if room_info.get('gameState') != 0 or room_info.get('gameState') != 2:
+                eel.updateRoomInfo(room_info)
+
         else:
             print("Unknown command received.")
 

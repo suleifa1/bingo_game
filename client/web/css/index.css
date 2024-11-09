@@ -271,3 +271,74 @@ body {
     border-radius: 5px;
     border: 1px solid #ddd;
 }
+
+/* Стили для системных сообщений */
+.system-messages {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 300px;
+    max-height: 50vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column-reverse; /* Новые сообщения появляются снизу */
+    z-index: 1000; /* Чтобы сообщения отображались поверх других элементов */
+}
+
+.system-message {
+    background-color: rgba(255, 107, 107, 0.9); /* Полупрозрачный фон с основным цветом */
+    color: #fff;
+    padding: 10px 15px;
+    margin-top: 10px;
+    border-radius: 5px;
+    animation: fade-in-out 5s forwards;
+    font-size: 0.9em;
+}
+
+/* Анимация появления и исчезновения */
+@keyframes fade-in-out {
+    0% { opacity: 0; transform: translateY(20px); }
+    10% { opacity: 1; transform: translateY(0); }
+    90% { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(20px); }
+}
+
+/* Добавьте этот код в конец вашего файла CSS */
+
+
+/* Стили для блока вызванных номеров */
+.called-numbers {
+    margin-top: 20px;
+}
+
+.numbers-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.number-item {
+    width: 50px;
+    height: 50px;
+    background-color: #ffebcd;
+    color: #333;
+    font-size: 1.2em;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 50%;
+    border: 1px solid #ddd;
+    position: relative;
+}
+
+.number-item.new-number {
+    animation: highlight 1s ease-in-out;
+    background-color: #ff6b6b;
+    color: #fff;
+}
+
+@keyframes highlight {
+    0% { transform: scale(1.5); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+}
