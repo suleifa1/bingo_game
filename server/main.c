@@ -68,6 +68,7 @@ enum CommandType {
     CMD_FINDGAME,
     CMDS_ROOM_INFO,
     CMD_EXIT_ROOM,
+
     TOTAL_CMDS
 };
 
@@ -427,6 +428,7 @@ void manage_game_play(struct GameRoom *room) {
                 // Отправка номера всем игрокам в комнате и перевод их в STATE_MARK_NUMBER
                 for (int i = 0; i < room->playerCount; i++) {
                     struct Client *client = room->players[i];
+                    if(client->state != STATE_RECONNECTING && client->socket != 0)
                     send_number(client,number);
                 }
 
@@ -526,13 +528,13 @@ void manage_game_play(struct GameRoom *room) {
     }
 }
 
-void send_end_game(int client_index) {
+void send_end_game(struct Client *client) {
     struct MessageHeader end_game = {"SP", CMDS_END_GAME, 0};
 
-    if (send(clients[client_index].socket, &end_game, sizeof(end_game), 0) < 0) {
+    if (send(client->socket, &end_game, sizeof(end_game), 0) < 0) {
         perror("Failed to send end_game");
     } else {
-        clients[client_index].last_ping = time(NULL);
+        //client->socket.last_ping = time(NULL); ??
         //printf("PING %d\n", clients[client_index].socket);
     }
 }
@@ -544,7 +546,7 @@ void end_game_in_room(struct GameRoom *room) {
         client->state = STATE_LOBBY;
         memset(client->marked, 0, sizeof(client->marked));
         client->ticket_count = 0;
-        send_end_game(i);
+        send_end_game(client);
     }
 
     // Сброс состояния комнаты

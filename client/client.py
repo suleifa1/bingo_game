@@ -261,26 +261,6 @@ class Client:
             if room_info.get('gameState') != 0 or room_info.get('gameState') != 2:
                 eel.updateRoomInfo(room_info)
 
-            current_unpause = room_info.get('unpause')
-
-            # Проверяем, изменилось ли значение unpause
-            if current_unpause != self.previous_unpause:
-                self.previous_unpause = current_unpause
-
-                if current_unpause != -1:
-                    # Вычисляем оставшееся время до окончания паузы
-                    current_time = time.time()
-                    remaining_time = current_unpause - current_time
-
-                    if remaining_time > 0:
-                        # Запускаем таймер на стороне JavaScript
-                        eel.updateTimer(remaining_time)
-                    #else:
-                        # Если время уже прошло, скрываем таймер
-                        eel.hideTimer()
-                #else:
-                    #eel.hideTimer()
-
         else:
             print("Unknown command received.")
 

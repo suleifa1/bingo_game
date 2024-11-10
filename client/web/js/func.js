@@ -1,10 +1,6 @@
    let chatMessages = [];// Асинхронная функция для регистрации
    let previousCalledNumbers = []; // Предыдущий список вызванных номеров
         // Глобальные переменные
-   let timerInterval = null;
-
-
-
 
    // Экспорт функций для вызова из Python
     eel.expose(clearTicket);
@@ -191,66 +187,3 @@
 
 
 
-// Функция для обновления таймера
-function updateTimer(remainingTime) {
-    // Останавливаем предыдущий таймер, если он существует
-    if (timerInterval !== null) {
-        clearInterval(timerInterval);
-    }
-
-    // Обновляем отображение таймера сразу
-    displayRemainingTime(remainingTime);
-
-    // Запускаем таймер обратного отсчета
-    timerInterval = setInterval(() => {
-        remainingTime -= 1;
-        displayRemainingTime(remainingTime);
-
-        if (remainingTime <= 0) {
-            clearInterval(timerInterval);
-            timerInterval = null;
-            onTimerEnd();
-        }
-    }, 1000);
-}
-
-// Функция для скрытия таймера
-function hideTimer() {
-    // Останавливаем таймер, если он существует
-    if (timerInterval !== null) {
-        clearInterval(timerInterval);
-        timerInterval = null;
-    }
-
-    // Очищаем отображение таймера
-    const timerElement = document.getElementById("timer-display");
-    timerElement.textContent = '';
-
-    // Очищаем статус
-    const statusElement = document.getElementById("status-display");
-    statusElement.textContent = "";
-}
-
-// Функция для отображения оставшегося времени
-function displayRemainingTime(remainingTime) {
-    const minutes = Math.floor(remainingTime / 60);
-    const seconds = Math.floor(remainingTime % 60);
-
-    const timerElement = document.getElementById("timer-display");
-    timerElement.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
-
-    // Обновляем статус
-    const statusElement = document.getElementById("status-display");
-    statusElement.textContent = "Отметьте номер! Следующий номер будет через:";
-}
-
-// Функция, вызываемая при завершении таймера
-function onTimerEnd() {
-    // Скрываем таймер
-    hideTimer();
-
-    // Обновляем статус
-    const statusElement = document.getElementById("status-display");
-    statusElement.textContent = "Время вышло! Получаем следующий номер...";
-
-}
