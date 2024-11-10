@@ -34,7 +34,9 @@ enum ClientState {
     STATE_GET_NUMBER,
     STATE_MARK_NUMBER,
 
-    STATE_BINGO_CHECK
+    STATE_BINGO_CHECK,
+    STATE_WIN_GAME,
+    STATE_LOSE_GAME
 };
 
 enum GameState {
@@ -434,7 +436,7 @@ void manage_game_play(struct GameRoom *room) {
 
                 // Переход к состоянию ожидания отметки
                 room->gameState = GAME_WAIT_FOR_MARK;
-                room->unpause = current_time + 15; // Устанавливаем паузу на 20 секунд
+                room->unpause = current_time + 3; // Устанавливаем паузу на 20 секунд
             } else {
                 // Если нет доступных номеров, проверяем, можно ли завершить игру
                 room->gameState = GAME_FINISH;
@@ -487,6 +489,7 @@ void manage_game_play(struct GameRoom *room) {
                     }
                     if (bingo) {
                         printf("Client %s declares BINGO and wins!\n", client->nickname);
+                        client->state = STATE_WIN_GAME;
                         room->gameState = GAME_FINISH;
                         bingo_found = 1;
                         break;
@@ -539,14 +542,39 @@ void send_end_game(struct Client *client) {
     }
 }
 
+void send_user_info(struct Client *client) {
+    if (client->state == STATE_DISCONNECTED || client->socket <= 0 || client->state == STATE_RECONNECTING) {
+        perror("Client is not connected or invalid socket\n");
+        return;
+    }
+
+    // Создаем заголовок сообщения с командой CMDS_USER_INFO и длиной структуры клиента
+    struct MessageHeader header = {"SP", CMDS_USER_INFO, sizeof(struct Client)};
+
+    // Отправляем заголовок сообщения
+    if (send(client->socket, &header, sizeof(header), 0) < 0) {
+        perror("Failed to send CMDS_USER_INFO header");
+        return;
+    }
+
+    // Отправляем данные клиента
+    if (send(client->socket, client, sizeof(struct Client), 0) < 0) {
+        perror("Failed to send client info");
+    } else {
+        printf("Client info sent to client %s (socket %d)\n", client->nickname, client->socket);
+    }
+}
+
+
 void end_game_in_room(struct GameRoom *room) {
     // Обнуляем состояние игроков и переводим их в начальное состояние
     for (int i = 0; i < room->playerCount; i++) {
         struct Client *client = room->players[i];
-        client->state = STATE_LOBBY;
+        if (client->state != STATE_WIN_GAME) client->state = STATE_LOSE_GAME;
         memset(client->marked, 0, sizeof(client->marked));
         client->ticket_count = 0;
         send_end_game(client);
+        send_user_info(client);
     }
 
     // Сброс состояния комнаты
@@ -558,7 +586,6 @@ void end_game_in_room(struct GameRoom *room) {
     memset(room->availableNumbers, 0, sizeof(room->availableNumbers));
     printf("Game finished in room %d, resetting room\n", room->roomId);
 }
-
 
 
 
@@ -630,28 +657,7 @@ void manage_game_rooms() {
 /// {room functions}
 
 /// {server side func}
-void send_user_info(struct Client *client) {
-    if (client->state == STATE_DISCONNECTED || client->socket <= 0 || client->state == STATE_RECONNECTING) {
-        perror("Client is not connected or invalid socket\n");
-        return;
-    }
 
-    // Создаем заголовок сообщения с командой CMDS_USER_INFO и длиной структуры клиента
-    struct MessageHeader header = {"SP", CMDS_USER_INFO, sizeof(struct Client)};
-
-    // Отправляем заголовок сообщения
-    if (send(client->socket, &header, sizeof(header), 0) < 0) {
-        perror("Failed to send CMDS_USER_INFO header");
-        return;
-    }
-
-    // Отправляем данные клиента
-    if (send(client->socket, client, sizeof(struct Client), 0) < 0) {
-        perror("Failed to send client info");
-    } else {
-        printf("Client info sent to client %s (socket %d)\n", client->nickname, client->socket);
-    }
-}
 
 void generate_ticket(struct Client *client) {
     srand(time(NULL) + client->socket); // Инициализация генератора случайных чисел
@@ -898,7 +904,7 @@ void process_command(struct Client *client, enum CommandType command, char *payl
             }
             break;
         case CMD_EXIT_ROOM:
-            if(client->state == STATE_GOT_TICKET)
+            if(client->state == STATE_GOT_TICKET || client->state == STATE_WIN_GAME || client->state == STATE_LOSE_GAME)
             {
                 remove_client_from_room(client);
                 client->ticket_count = 0;

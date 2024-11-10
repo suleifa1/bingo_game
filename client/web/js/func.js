@@ -1,5 +1,8 @@
    let chatMessages = [];// Асинхронная функция для регистрации
    let previousCalledNumbers = []; // Предыдущий список вызванных номеров
+   let fireworks = null;
+
+
         // Глобальные переменные
 
    // Экспорт функций для вызова из Python
@@ -112,7 +115,15 @@
             });
 
             document.getElementById(pageId).classList.remove("hidden");
-        }
+            if (pageId === 'win-game') {
+                startFireworks()
+            } else {
+                if (fireworks !== null){
+                    fireworks.stop()
+                }
+
+            }
+    }
 
     function showSystemMessage(message) {
         const container = document.getElementById("system-messages");
@@ -184,6 +195,34 @@
     function close_browser_window() {
         window.close();  // Закрываем окно браузера
     }
+
+        // Функция для запуска фейерверка
+   function startFireworks() {
+         // Отображаем секцию выигрыша
+
+        const container = document.getElementById('fireworks-container');
+        container.innerHTML = '';
+        fireworks = new Fireworks.default(container, {
+
+            speed: 2,
+            gravity: 1,
+            particles: 50,
+            explosion: 1,
+            traceSpeed: 5,
+            delay: { min: 30, max: 60 },
+            lineWidth: {
+                explosion: {
+                      min: 4,
+                      max: 8
+                }
+
+            }
+        });
+
+        fireworks.start();
+    }
+
+
 
 
 

@@ -7,11 +7,15 @@
     <link rel="stylesheet" href="css/index.css">
     <script type="text/javascript" src="/eel.js"></script>
     <script src="js/func.js"></script>
+
+    <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval' data: blob:;">
+    <script src="https://cdn.jsdelivr.net/npm/fireworks-js@2.x/dist/index.umd.js"></script>
+
 </head>
 <body>
 
     <!-- Страница регистрации -->
-    <section id="registration" class="page ">
+    <section id="registration" class="page hidden">
         <div class="container">
             <div class="registration-box">
                 <h1>Добро пожаловать в Bingo!</h1>
@@ -112,6 +116,40 @@
             </div>
         </div>
     </section>
+
+<!-- Страница победы -->
+<!-- Страница победы -->
+    <section id="win-game" class="page ">
+        <div class="container">
+            <div class="win-box">
+                <h1>Поздравляем, вы выиграли!</h1>
+                <div id="fireworks-container" class="fireworks">
+                    <!-- Фейерверк будет отображаться здесь -->
+                </div>
+                <div class="actions">
+                    <button onclick="goToLobby()">Выйти в лобби</button>
+                    <button onclick="disconnect()">Выйти из игры</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+    <!-- Страница проигрыша -->
+    <section id="lose-game" class="page hidden">
+        <div class="container">
+            <div class="lose-box">
+                <h1>Вы проиграли</h1>
+                <p>Не расстраивайтесь, удача улыбнется вам в следующий раз!</p>
+                <div class="actions">
+                    <button onclick="leaveRoom()">Выйти в лобби</button>
+                    <button onclick="disconnect()">Выйти из игры</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
 
 
 </body>

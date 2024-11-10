@@ -144,6 +144,8 @@ class State(Enum):
     STATE_MARK_NUMBER = 7
 
     STATE_BINGO_CHECK = 8
+    STATE_END_WIN = 9
+    STATE_END_LOSE = 10
 
 
 class Client:
@@ -230,17 +232,16 @@ class Client:
         elif command == Command.OK:
             print("Received OK from server.")
         elif command == Command.END_GAME:
-            eel.clearTicket()
+            eel.clearTicket(0)
             eel.showPage('lobby')
             self.ticket = None
             self.data = None
             print("Game ended.")
         elif command == Command.USER_INFO:
             self.data = unpack_client(payload)
-            print(self.data.get('state'))
             if State(self.data.get('state')) == State.STATE_GOT_TICKET:
                 eel.showPage('waiting-room')
-                eel.displayTicket(self.data.get('ticket'))
+                eel.displayTicket(self.data.get('ticket'), 0)
 
             elif (State(self.data.get('state')) == State.STATE_GET_NUMBER or
                   State(self.data.get('state')) == State.STATE_MARK_NUMBER or
@@ -253,6 +254,12 @@ class Client:
 
             elif State(self.data.get('state')) == State.STATE_LOBBY:
                 eel.showPage("lobby")
+
+            elif State(self.data.get('state')) == State.STATE_END_WIN:
+                eel.showPage("win-game")
+
+            elif State(self.data.get('state')) == State.STATE_END_LOSE:
+                eel.showPage("lose-game")
 
             print(f"Info: {self.data}")
         elif command == Command.ROOM_INFO:
