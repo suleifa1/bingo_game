@@ -1,6 +1,7 @@
    let chatMessages = [];// Асинхронная функция для регистрации
    let previousCalledNumbers = []; // Предыдущий список вызванных номеров
-
+        // Глобальные переменные
+   let timerInterval = null;
 
 
 
@@ -12,6 +13,8 @@
     eel.expose(updateCurrentNumber);
     eel.expose(showSystemMessage);
     eel.expose(updateRoomInfo);
+    eel.expose(restoreWaitRoom);
+    eel.expose(close_browser_window);
 
     async function register() {
         let nickname = document.getElementById("nickname").value;
@@ -81,7 +84,6 @@
                 // Функция для выхода из комнаты ожидания и возвращения в лобби
     async function leaveRoom() {
         await eel.leave_room()();
-        showPage("lobby");  // Возвращаемся в лобби
     }
 
         // Обновление отображения текущего номера
@@ -115,7 +117,6 @@
 
             document.getElementById(pageId).classList.remove("hidden");
         }
-
 
     function showSystemMessage(message) {
         const container = document.getElementById("system-messages");
@@ -160,9 +161,6 @@
         previousCalledNumbers = calledNumbers.slice();
     }
 
-    // Экспорт функции для вызова из Python
-
-
     function updateRoomInfo(roomInfo) {
         // Обновление вызванных номеров
         updateCalledNumbers(roomInfo.calledNumbers);
@@ -174,3 +172,85 @@
 
         // Вы можете добавить другие обновления интерфейса на основе roomInfo
     }
+
+    function restoreWaitRoom(){
+        let getTicketButton = document.getElementById('get_button');
+        let ticket = document.getElementById('ticket');
+
+        getTicketButton.classList.remove('hidden');
+        ticket.classList.add('hidden');
+        clearTicket(0);
+
+    }
+
+
+
+    function close_browser_window() {
+        window.close();  // Закрываем окно браузера
+    }
+
+
+
+// Функция для обновления таймера
+function updateTimer(remainingTime) {
+    // Останавливаем предыдущий таймер, если он существует
+    if (timerInterval !== null) {
+        clearInterval(timerInterval);
+    }
+
+    // Обновляем отображение таймера сразу
+    displayRemainingTime(remainingTime);
+
+    // Запускаем таймер обратного отсчета
+    timerInterval = setInterval(() => {
+        remainingTime -= 1;
+        displayRemainingTime(remainingTime);
+
+        if (remainingTime <= 0) {
+            clearInterval(timerInterval);
+            timerInterval = null;
+            onTimerEnd();
+        }
+    }, 1000);
+}
+
+// Функция для скрытия таймера
+function hideTimer() {
+    // Останавливаем таймер, если он существует
+    if (timerInterval !== null) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+    }
+
+    // Очищаем отображение таймера
+    const timerElement = document.getElementById("timer-display");
+    timerElement.textContent = '';
+
+    // Очищаем статус
+    const statusElement = document.getElementById("status-display");
+    statusElement.textContent = "";
+}
+
+// Функция для отображения оставшегося времени
+function displayRemainingTime(remainingTime) {
+    const minutes = Math.floor(remainingTime / 60);
+    const seconds = Math.floor(remainingTime % 60);
+
+    const timerElement = document.getElementById("timer-display");
+    timerElement.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+
+    // Обновляем статус
+    const statusElement = document.getElementById("status-display");
+    statusElement.textContent = "Отметьте номер! Следующий номер будет через:";
+}
+
+// Функция, вызываемая при завершении таймера
+function onTimerEnd() {
+    // Скрываем таймер
+    hideTimer();
+
+    // Обновляем статус
+    const statusElement = document.getElementById("status-display");
+    statusElement.textContent = "Время вышло! Получаем следующий номер...";
+
+}

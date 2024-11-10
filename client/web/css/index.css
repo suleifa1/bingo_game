@@ -342,3 +342,20 @@ body {
     0% { transform: scale(1.5); opacity: 0; }
     100% { transform: scale(1); opacity: 1; }
 }
+
+
+/* Ваши существующие стили */
+
+/* Стили для статуса игры и таймера */
+#status-display {
+    font-size: 1.2em;
+    color: #ff6b6b;
+    margin-top: 10px;
+}
+
+#timer-display {
+    font-size: 2em;
+    color: #333;
+    margin-top: 5px;
+    margin-bottom: 20px;
+}

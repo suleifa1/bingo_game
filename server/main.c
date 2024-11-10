@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <time.h>
+#include <signal.h>
 
 #define PORT 4242
 #define MAX_CLIENTS 12
@@ -66,6 +67,7 @@ enum CommandType {
     CMDS_USER_INFO,
     CMD_FINDGAME,
     CMDS_ROOM_INFO,
+    CMD_EXIT_ROOM,
     TOTAL_CMDS
 };
 
@@ -274,8 +276,7 @@ void send_number(struct Client *client, int number) {
         printf("Number %d sent to client %s\n", number, client->nickname);
     }
 
-    // Переводим клиента в состояние STATE_MARK_NUMBER
-    client->state = STATE_MARK_NUMBER;
+    if (client->state != STATE_RECONNECTING) client->state = STATE_MARK_NUMBER;
 }
 
 
@@ -431,7 +432,7 @@ void manage_game_play(struct GameRoom *room) {
 
                 // Переход к состоянию ожидания отметки
                 room->gameState = GAME_WAIT_FOR_MARK;
-                room->unpause = current_time + 2; // Устанавливаем паузу на 20 секунд
+                room->unpause = current_time + 15; // Устанавливаем паузу на 20 секунд
             } else {
                 // Если нет доступных номеров, проверяем, можно ли завершить игру
                 room->gameState = GAME_FINISH;
@@ -514,7 +515,7 @@ void manage_game_play(struct GameRoom *room) {
             // Если ни у кого нет BINGO, начинаем новый раунд с выдачи следующего номера
             if (!bingo_found) {
                 for (int i = 0; i < room->playerCount; i++) {
-                    room->players[i]->state = STATE_GET_NUMBER;
+                    if (room->players[i]->state != STATE_RECONNECTING) room->players[i]->state = STATE_GET_NUMBER;
                 }
                 room->gameState = GAME_SEND_NUMBER;
             }
@@ -589,7 +590,7 @@ void manage_game_rooms() {
                     start_game_in_room(room_index);
                 }else{
                     for (int i = 0; i < room->playerCount; i++) {
-                        send_room_info(room->players[i]);
+                        if (room->players[i]->state != STATE_RECONNECTING) send_room_info(room->players[i]);
                     }
 
                 }
@@ -605,14 +606,14 @@ void manage_game_rooms() {
                 if(room->gameState == GAME_PLAY) room->gameState = GAME_SEND_NUMBER;
 
                 for (int i = 0; i < room->playerCount; i++) {
-                    send_room_info(room->players[i]);
+                    if (room->players[i]->state != STATE_RECONNECTING) send_room_info(room->players[i]);
                 }
                 manage_game_play(room);
                 break;
 
             case GAME_FINISH:
                 for (int i = 0; i < room->playerCount; i++) {
-                    send_room_info(room->players[i]);
+                    if (room->players[i]->state != STATE_RECONNECTING) send_room_info(room->players[i]);
                 }
                 // Завершение игры и обнуление состояния комнаты
                 end_game_in_room(room);
@@ -894,7 +895,27 @@ void process_command(struct Client *client, enum CommandType command, char *payl
                 printf("Client in invalid state for registration\n");
             }
             break;
+        case CMD_EXIT_ROOM:
+            if(client->state == STATE_GOT_TICKET)
+            {
+                remove_client_from_room(client);
+                client->ticket_count = 0;
+                memset(client->ticket, 0, sizeof(client->ticket));
+                memset(client->marked, 0, sizeof(client->marked));
+                client->state = STATE_LOBBY;
+                send_user_info(client);
 
+            }
+            else if (client->state == STATE_WAITING_FOR_GAME)
+            {
+                remove_client_from_room(client);
+                client->state = STATE_LOBBY;
+                send_user_info(client);
+            }else{
+                printf("Client in invalid state for registration\n");
+            }
+
+            break;
         case CMD_FINDGAME:
             if (client->state == STATE_LOBBY) {
                 assign_client_to_room(client);
@@ -1051,6 +1072,7 @@ void handle_client_data(struct Client *client) {
 }
 
 int main(void) {
+    signal(SIGPIPE, SIG_IGN);
     int server_socket, new_socket, max_sd, sd, activity;
     struct sockaddr_in address;
     fd_set readfds;

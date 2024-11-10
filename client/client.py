@@ -129,6 +129,7 @@ class Command(Enum):
     USER_INFO = 15
     CMD_FINDGAME = 16
     ROOM_INFO = 17
+    EXIT_ROOM = 18
 
 class State(Enum):
     STATE_REGISTER = 0
@@ -155,6 +156,7 @@ class Client:
         self.last_pong_time = time.time()
         self.ticket = None
         self.data = None
+        self.previous_unpause = None
 
     def connect_to_server(self):
         while not self.connected:
@@ -198,11 +200,14 @@ class Client:
         self.send_command(Command.PONG)
         print("Sent PONG in response to PING")
 
+    def exit_room(self):
+        self.send_command(Command.EXIT_ROOM)
+        print("Exit room")
+
     def disconnect(self):
         self.connected = False
         if self.socket:
             self.socket.close()
-            print("Disconnected")
 
     def process_payload(self, command, payload):
         if command == Command.PING:
@@ -255,6 +260,26 @@ class Client:
             handle_room_update(room_info)
             if room_info.get('gameState') != 0 or room_info.get('gameState') != 2:
                 eel.updateRoomInfo(room_info)
+
+            current_unpause = room_info.get('unpause')
+
+            # Проверяем, изменилось ли значение unpause
+            if current_unpause != self.previous_unpause:
+                self.previous_unpause = current_unpause
+
+                if current_unpause != -1:
+                    # Вычисляем оставшееся время до окончания паузы
+                    current_time = time.time()
+                    remaining_time = current_unpause - current_time
+
+                    if remaining_time > 0:
+                        # Запускаем таймер на стороне JavaScript
+                        eel.updateTimer(remaining_time)
+                    #else:
+                        # Если время уже прошло, скрываем таймер
+                        eel.hideTimer()
+                #else:
+                    #eel.hideTimer()
 
         else:
             print("Unknown command received.")

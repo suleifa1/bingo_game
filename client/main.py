@@ -41,10 +41,17 @@ def bingo_check():
 def ask_ticket():
     client.ask_ticket()
 
+@eel.expose
+def leave_room():
+    client.exit_room()
+    eel.restoreWaitRoom()
 
 @eel.expose
 def disconnect():
     client.disconnect()
+    eel.close_browser_window()
+    exit()
+
 
 
 threading.Thread(target=check_connection_status, daemon=True).start()
