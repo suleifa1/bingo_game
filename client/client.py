@@ -130,6 +130,7 @@ class Command(Enum):
     CMD_FINDGAME = 16
     ROOM_INFO = 17
     EXIT_ROOM = 18
+    CALL_NUM = 19
 
 class State(Enum):
     STATE_REGISTER = 0
@@ -278,6 +279,10 @@ class Client:
             handle_room_update(room_info)
             if room_info.get('gameState') != 0 or room_info.get('gameState') != 2:
                 eel.updateRoomInfo(room_info)
+        elif command == Command.CALL_NUM:
+            numbers = struct.unpack(f"{len(payload) // 4}I", payload)
+            print("mark client")
+            eel.markMissingNumbers(numbers)
 
         else:
             print("Unknown command received.")

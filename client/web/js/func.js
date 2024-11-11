@@ -2,7 +2,9 @@
    let previousCalledNumbers = []; // Предыдущий список вызванных номеров
    let fireworks = null;
    let attemptCount = 0;
-
+   let clientMarkedNumbers = [];
+   let numbers = [];
+   eel.expose(markMissingNumbers);
 
         // Глобальные переменные
 
@@ -59,6 +61,7 @@
             const cell = document.createElement("div");
             cell.classList.add("ticket-cell");
             cell.textContent = number;
+            if (isGame) cell.addEventListener("click", () => markNumberOnTicket(parseInt(cell.textContent)));
             grid.appendChild(cell);
         });
 
@@ -150,7 +153,7 @@
     function updateCalledNumbers(calledNumbers) {
         const numbersContainer = document.getElementById("called-numbers-list");
         numbersContainer.innerHTML = ''; // Очищаем контейнер
-
+        numbers = calledNumbers;
         // Определяем новые номера
         const newNumbers = calledNumbers.filter(num => !previousCalledNumbers.includes(num));
 
@@ -169,6 +172,22 @@
 
         // Обновляем предыдущий список вызванных номеров
         previousCalledNumbers = calledNumbers.slice();
+    }
+
+    function markNumberOnTicket(number) {
+        if (numbers.includes(number) && !clientMarkedNumbers.includes(number)) {
+            clientMarkedNumbers.push(number);
+
+            // Находим элемент на билете и добавляем класс "marked"
+            const ticketCells = document.querySelectorAll(".ticket-cell");
+            ticketCells.forEach(cell => {
+                if (parseInt(cell.textContent) === number) {
+                    cell.classList.add("marked");
+                }
+            });
+        } else {
+            console.log("Номер не может быть отмечен: либо он не вызван, либо уже отмечен.");
+        }
     }
 
     function updateRoomInfo(roomInfo) {
@@ -247,6 +266,20 @@
     function hideConnectionStatus(){
         document.getElementById("connection-status").classList.add("hidden");
 
+    }
+
+    function markMissingNumbers(callNumbers) {
+        callNumbers.forEach(number => {
+            if (!clientMarkedNumbers.includes(number)) {
+                clientMarkedNumbers.push(number);
+                const cells = document.querySelectorAll(".ticket-cell");
+                cells.forEach(cell => {
+                    if (parseInt(cell.textContent) === number) {
+                        cell.classList.add("marked"); // Добавляем класс marked
+                    }
+                });
+            }
+        });
     }
 
 

@@ -194,6 +194,11 @@ body {
     border: 1px solid #ddd;
 }
 
+.ticket-cell.marked {
+        background-color: #90ee90; /* Светло-зеленый фон для отмеченных номеров */
+        color: white;
+    }
+
 /* Игровая секция */
 .game-box {
     background-color: #ffffff;
