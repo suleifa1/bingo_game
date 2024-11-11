@@ -19,6 +19,7 @@ def check_connection_status():
 
 @eel.expose
 def register(nickname):
+    client.nickname = nickname
     client.register(nickname)
 
 
@@ -41,10 +42,12 @@ def bingo_check():
 def ask_ticket():
     client.ask_ticket()
 
+
 @eel.expose
 def leave_room():
     client.exit_room()
     eel.restoreWaitRoom()
+
 
 @eel.expose
 def disconnect():
@@ -53,9 +56,8 @@ def disconnect():
     exit()
 
 
-
 threading.Thread(target=check_connection_status, daemon=True).start()
 
 client.start()
 # Запуск Eel с указанием главной страницы
-eel.start('index.html', size=(800, 800), port=random.randint(1024, 65535))
+eel.start('index.html', size=(500, 500), port=random.randint(1024, 65535))

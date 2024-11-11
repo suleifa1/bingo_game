@@ -160,6 +160,7 @@ class Client:
         self.data = None
         self.previous_unpause = None
         self.attempt_count = 0
+        self.nickname = None
 
     def connect_to_server(self):
         """Подключение к серверу с уведомлением о статусе и количестве попыток."""
@@ -285,6 +286,8 @@ class Client:
         while True:
             if not self.connected:
                 self.connect_to_server()
+                if self.nickname is not None:
+                    self.register(self.nickname)
                 continue
 
             try:
@@ -303,4 +306,3 @@ class Client:
                     print("Unknown prefix")
             except socket.error:
                 self.connected = False
-                time.sleep(RECONNECT_DELAY)

@@ -16,11 +16,13 @@
 #define TICKET_SIZE 5
 #define PING_INTERVAL 5
 #define TIMEOUT 15
-#define RECONNECT_TIMEOUT 30
+#define RECONNECT_TIMEOUT 100
 #define MAX_NICKNAME_LEN 20
 #define MAX_ROOMS (MAX_CLIENTS / 3)
 #define MAX_PLAYERS_IN_ROOM (MAX_CLIENTS / MAX_ROOMS)
 #define MAX_NUMBERS 40
+#include <fcntl.h>
+
 
 enum ClientState {
     STATE_REGISTER,
@@ -489,7 +491,13 @@ void manage_game_play(struct GameRoom *room) {
                     }
                     if (bingo) {
                         printf("Client %s declares BINGO and wins!\n", client->nickname);
-                        client->state = STATE_WIN_GAME;
+                        if (client->state == STATE_RECONNECTING) {
+                            client->prev_state = STATE_WIN_GAME;
+                        }
+                        else {
+                            client->state = STATE_WIN_GAME;
+                        }
+
                         room->gameState = GAME_FINISH;
                         bingo_found = 1;
                         break;
@@ -570,7 +578,17 @@ void end_game_in_room(struct GameRoom *room) {
     // Обнуляем состояние игроков и переводим их в начальное состояние
     for (int i = 0; i < room->playerCount; i++) {
         struct Client *client = room->players[i];
-        if (client->state != STATE_WIN_GAME) client->state = STATE_LOSE_GAME;
+        if(room->gameState == GAME_FINISH) {
+            if(client->state == STATE_RECONNECTING && client->prev_state != STATE_WIN_GAME) {
+                client->prev_state = STATE_LOSE_GAME;
+            }
+
+            if (client->state != STATE_WIN_GAME && client->state != STATE_RECONNECTING) client->state = STATE_LOSE_GAME;
+
+        }
+
+
+
         memset(client->marked, 0, sizeof(client->marked));
         client->ticket_count = 0;
         send_end_game(client);
@@ -596,13 +614,25 @@ void manage_game_rooms() {
 
         // Пропускаем комнату, если в ней нет игроков
         if (room->playerCount == 0) {
+            if (room->gameState != GAME_WAITING) {
+                end_game_in_room(room);
+            }
             continue;
+        }
+        int count = 0;
+        for (int i = 0; i < room->playerCount; i++) {
+            if (room->players[i]->state == STATE_RECONNECTING) {
+                    count++;
+            }
+        }
+        if (count == MAX_PLAYERS_IN_ROOM) {
+            end_game_in_room(room);
         }
 
         // Управляем состоянием комнаты в зависимости от текущего состояния игры
         switch (room->gameState) {
-            case GAME_WAITING:
 
+            case GAME_WAITING:
                 // Проверяем, готовы ли все игроки в комнате
                 all_ready = 1;
                 for (int i = 0; i < room->playerCount; i++) {
@@ -636,6 +666,7 @@ void manage_game_rooms() {
 
                 for (int i = 0; i < room->playerCount; i++) {
                     if (room->players[i]->state != STATE_RECONNECTING) send_room_info(room->players[i]);
+
                 }
                 manage_game_play(room);
                 break;
@@ -1079,6 +1110,24 @@ void handle_client_data(struct Client *client) {
     if (payload) free(payload);
 }
 
+void reserve_descriptors() {
+    int temp_fd1 = open("/tmp/tempfile1", O_CREAT | O_RDWR, 0666);
+    int temp_fd2 = open("/tmp/tempfile2", O_CREAT | O_RDWR, 0666);
+    int temp_fd3 = open("/tmp/tempfile3", O_CREAT | O_RDWR, 0666);
+
+    if (temp_fd1 < 0 || temp_fd2 < 0 || temp_fd3 < 0) {
+        perror("Failed to open temporary files");
+        exit(EXIT_FAILURE);
+    }
+
+    // Удаляем временные файлы
+    unlink("/tmp/tempfile1");
+    unlink("/tmp/tempfile2");
+    unlink("/tmp/tempfile3");
+}
+
+int temp_fd1, temp_fd2, temp_fd3;
+
 int main(void) {
     signal(SIGPIPE, SIG_IGN);
     int server_socket, new_socket, max_sd, sd, activity;
@@ -1112,15 +1161,18 @@ int main(void) {
         if (FD_ISSET(server_socket, &readfds)) {
             int addrlen = sizeof(address);
 
-            do {
-                if ((new_socket = accept(server_socket, (struct sockaddr *)&address, (socklen_t *) &addrlen)) < 0) {
-                    perror("accept failed");
-                    exit(EXIT_FAILURE);
-                }
-            } while (new_socket == 0);
-
+            reserve_descriptors();
+            if ((new_socket = accept(server_socket, (struct sockaddr *)&address, (socklen_t *) &addrlen)) < 0) {
+                perror("accept failed");
+                exit(EXIT_FAILURE);
+            }
+            close(temp_fd1);
+            close(temp_fd2);
+            close(temp_fd3);
             add_new_client(new_socket, &address);
         }
+
+
 
         for (int i = 0; i < MAX_CLIENTS; i++) {
 
