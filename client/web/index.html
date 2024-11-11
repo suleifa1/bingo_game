@@ -14,8 +14,16 @@
 </head>
 <body>
 
+    <div id="connection-status" class="hidden">
+        <p id="connection-message"></p>
+        <button id="exit-button" class="hidden" onclick="disconnect()">Exit</button>
+    </div>
+
+
+
+
     <!-- Страница регистрации -->
-    <section id="registration" class="page hidden">
+    <section id="registration" class="page ">
         <div class="container">
             <div class="registration-box">
                 <h1>Добро пожаловать в Bingo!</h1>
@@ -119,7 +127,7 @@
 
 <!-- Страница победы -->
 <!-- Страница победы -->
-    <section id="win-game" class="page ">
+    <section id="win-game" class="page hidden">
         <div class="container">
             <div class="win-box">
                 <h1>Поздравляем, вы выиграли!</h1>
@@ -127,7 +135,7 @@
                     <!-- Фейерверк будет отображаться здесь -->
                 </div>
                 <div class="actions">
-                    <button onclick="goToLobby()">Выйти в лобби</button>
+                    <button onclick="leaveRoom()">Выйти в лобби</button>
                     <button onclick="disconnect()">Выйти из игры</button>
                 </div>
             </div>

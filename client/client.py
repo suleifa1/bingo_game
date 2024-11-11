@@ -159,14 +159,24 @@ class Client:
         self.ticket = None
         self.data = None
         self.previous_unpause = None
+        self.attempt_count = 0
 
     def connect_to_server(self):
+        """Подключение к серверу с уведомлением о статусе и количестве попыток."""
+        self.attempt_count = 0
         while not self.connected:
             try:
                 self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 self.socket.connect((self.server_ip, self.server_port))
                 self.connected = True
+                eel.hideConnectionStatus()
             except socket.error:
+                self.attempt_count += 1
+                eel.showConnectionStatus(
+                    f"Connection with server lost. Trying to reconnect. "
+                    f"Attempt: {self.attempt_count}",
+                    self.attempt_count
+                )
                 time.sleep(RECONNECT_DELAY)
 
     def start(self):

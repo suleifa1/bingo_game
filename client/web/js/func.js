@@ -1,6 +1,7 @@
    let chatMessages = [];// Асинхронная функция для регистрации
    let previousCalledNumbers = []; // Предыдущий список вызванных номеров
    let fireworks = null;
+   let attemptCount = 0;
 
 
         // Глобальные переменные
@@ -14,6 +15,8 @@
     eel.expose(updateRoomInfo);
     eel.expose(restoreWaitRoom);
     eel.expose(close_browser_window);
+    eel.expose(showConnectionStatus);
+    eel.expose(hideConnectionStatus)
 
     async function register() {
         let nickname = document.getElementById("nickname").value;
@@ -221,6 +224,31 @@
 
         fireworks.start();
     }
+
+
+
+    // Функция для отображения статуса подключения
+    function showConnectionStatus(message, attempts) {
+        const statusElement = document.getElementById("connection-status");
+        const messageElemenet = document.getElementById("connection-message");
+
+        messageElemenet.textContent = `${message}`;
+        statusElement.classList.remove("hidden");
+
+        // Если попыток больше 5, показываем кнопку выхода
+        if (attempts > 5) {
+
+            document.getElementById("exit-button").classList.remove("hidden");
+        } else {
+            document.getElementById("exit-button").classList.add("hidden");
+        }
+    }
+
+    function hideConnectionStatus(){
+        document.getElementById("connection-status").classList.add("hidden");
+
+    }
+
 
 
 
