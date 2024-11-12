@@ -777,7 +777,7 @@ void send_ping(int client_index) {
         perror("Failed to send PING");
     } else {
         clients[client_index].last_ping = time(NULL);
-        //printf("PING %d\n", clients[client_index].socket);
+        printf("PING %d\n", clients[client_index].socket);
     }
 }
 
@@ -798,6 +798,7 @@ void add_new_client(int new_socket, struct sockaddr_in *address) {
             printf("Added new client with socket %d at index %d (IP %s, PORT %d)\n",
                    new_socket, i, inet_ntoa(address->sin_addr), ntohs(address->sin_port));
             send_user_info(&clients[i]);
+            send_ping(i);
             added = 1;
             break;
         }
