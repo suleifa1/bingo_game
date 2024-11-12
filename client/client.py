@@ -1,3 +1,5 @@
+import datetime
+import inspect
 import socket
 import threading
 import struct
@@ -165,21 +167,46 @@ class Client:
 
     def connect_to_server(self):
         """Подключение к серверу с уведомлением о статусе и количестве попыток."""
-        self.attempt_count = 0
-        while not self.connected:
-            try:
-                self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                self.socket.connect((self.server_ip, self.server_port))
-                self.connected = True
-                eel.hideConnectionStatus()
-            except socket.error:
-                self.attempt_count += 1
-                eel.showConnectionStatus(
-                    f"Connection with server lost. Trying to reconnect. "
-                    f"Attempt: {self.attempt_count}",
-                    self.attempt_count
-                )
-                time.sleep(RECONNECT_DELAY)
+        # Попытка захватить блокировку без ожидания
+        acquired = self.lock.acquire(blocking=False)
+        if not acquired:
+            return
+
+        try:
+            stack = inspect.stack()
+            if len(stack) > 1:
+                caller_name = stack[1].function
+                print(f"called from '{caller_name}'.")
+            else:
+                print(f"called directly")
+            self.connected = False
+            self.attempt_count = 0
+
+            while not self.connected:
+                try:
+                    self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+                    self.socket.settimeout(5)
+                    self.socket.connect((self.server_ip, self.server_port))
+                    self.socket.settimeout(None)
+
+                    self.connected = True
+                    eel.hideConnectionStatus()
+                    self.last_pong_time = time.time()
+                    if self.nickname is not None:
+                        self.register(self.nickname)
+
+                except socket.error as e:
+                    self.attempt_count += 1
+                    eel.showConnectionStatus(
+                        f"Connection with server lost. Trying to reconnect. "
+                        f"Attempt: {self.attempt_count}",
+                        self.attempt_count
+                    )
+                    print(f"Попытка подключения {self.attempt_count} не удалась: {e}")
+                    time.sleep(RECONNECT_DELAY)
+        finally:
+            self.lock.release()
 
     def start(self):
         threading.Thread(target=self.receive_messages, daemon=True).start()
@@ -190,7 +217,8 @@ class Client:
             try:
                 self.socket.sendall(header + data)
             except socket.error:
-                self.connected = False
+                self.connect_to_server()
+                time.sleep(5)
 
     def register(self, nickname):
         self.send_command(Command.REGISTER, nickname.encode())
@@ -219,7 +247,6 @@ class Client:
         print("Exit room")
 
     def disconnect(self):
-        self.connected = False
         if self.socket:
             self.socket.close()
 
@@ -288,11 +315,10 @@ class Client:
             print("Unknown command received.")
 
     def receive_messages(self):
+
         while True:
             if not self.connected:
                 self.connect_to_server()
-                if self.nickname is not None:
-                    self.register(self.nickname)
                 continue
 
             try:
@@ -310,4 +336,6 @@ class Client:
                 else:
                     print("Unknown prefix")
             except socket.error:
-                self.connected = False
+                self.connect_to_server()
+                time.sleep(5)
+

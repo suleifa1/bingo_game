@@ -8,11 +8,14 @@ from client import Client  # Предполагается, что класс Cli
 
 eel.init('web')
 
-client = Client("147.228.67.102", 4242)
+client = Client("127.0.0.1", 4242)
 
 
 def check_connection_status():
     while True:
+        print("Time from last ping" + str(time.time() - client.last_pong_time))
+        if (time.time() - client.last_pong_time) >= 6:
+            client.connect_to_server()
         time.sleep(1)
 
 
