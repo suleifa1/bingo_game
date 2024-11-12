@@ -30,11 +30,8 @@
         showPage("waiting-room");
     }
 
-    async function markNumber() {
-        let number = prompt("Введите номер для отметки:");
-        if (number) {
-            await eel.mark_number(parseInt(number))();
-        }
+    async function markNumber(number) {
+        await eel.mark_number(parseInt(number))();
     }
 
     async function bingoCheck() {
@@ -96,10 +93,6 @@
         document.getElementById("number-display").textContent = number;
     }
 
-    function markNumber(number) {
-        console.log("Marked number:", number);
-        // Можно добавить логику для визуального обозначения помеченного числа
-    }
 
     function declareBingo() {
         console.log("Bingo!");
@@ -174,7 +167,9 @@
         previousCalledNumbers = calledNumbers.slice();
     }
 
-    function markNumberOnTicket(number) {
+
+
+    async function markNumberOnTicket(number) {
         if (numbers.includes(number) && !clientMarkedNumbers.includes(number)) {
             clientMarkedNumbers.push(number);
 
@@ -185,21 +180,19 @@
                     cell.classList.add("marked");
                 }
             });
+            await markNumber(number);
         } else {
             console.log("Номер не может быть отмечен: либо он не вызван, либо уже отмечен.");
         }
     }
 
     function updateRoomInfo(roomInfo) {
-        // Обновление вызванных номеров
         updateCalledNumbers(roomInfo.calledNumbers);
 
-        // Обновление текущего номера
         const currentNumberElement = document.getElementById("number-display");
         const lastNumber = roomInfo.calledNumbers[roomInfo.calledNumbers.length - 1] || '--';
         currentNumberElement.textContent = lastNumber;
 
-        // Вы можете добавить другие обновления интерфейса на основе roomInfo
     }
 
     function restoreWaitRoom(){
@@ -215,12 +208,10 @@
 
 
     function close_browser_window() {
-        window.close();  // Закрываем окно браузера
+        window.close();
     }
 
-        // Функция для запуска фейерверка
    function startFireworks() {
-         // Отображаем секцию выигрыша
 
         const container = document.getElementById('fireworks-container');
         container.innerHTML = '';
@@ -246,7 +237,6 @@
 
 
 
-    // Функция для отображения статуса подключения
     function showConnectionStatus(message, attempts) {
         const statusElement = document.getElementById("connection-status");
         const messageElemenet = document.getElementById("connection-message");
@@ -254,7 +244,6 @@
         messageElemenet.textContent = `${message}`;
         statusElement.classList.remove("hidden");
 
-        // Если попыток больше 5, показываем кнопку выхода
         if (attempts > 5) {
 
             document.getElementById("exit-button").classList.remove("hidden");
@@ -275,7 +264,7 @@
                 const cells = document.querySelectorAll(".ticket-cell");
                 cells.forEach(cell => {
                     if (parseInt(cell.textContent) === number) {
-                        cell.classList.add("marked"); // Добавляем класс marked
+                        cell.classList.add("marked");
                     }
                 });
             }

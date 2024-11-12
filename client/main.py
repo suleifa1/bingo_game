@@ -5,16 +5,15 @@ import time
 import eel
 from client import Client  # Предполагается, что класс Client импортирован из client.py
 
-# Инициализация Eel
-eel.init('web')  # Замените 'web' на путь к папке с index.html
 
-client = Client("127.0.0.1", 4242)  # Экземпляр класса Client
+eel.init('web')
+
+client = Client("147.228.67.102", 4242)
 
 
-# Функция для динамической проверки состояния подключения
 def check_connection_status():
     while True:
-        time.sleep(1)  # Проверка статуса каждую секунду
+        time.sleep(1)
 
 
 @eel.expose
@@ -59,5 +58,5 @@ def disconnect():
 threading.Thread(target=check_connection_status, daemon=True).start()
 
 client.start()
-# Запуск Eel с указанием главной страницы
-eel.start('index.html', size=(500, 500), port=random.randint(1024, 65535))
+
+eel.start('index.html', size=(600, 720), port=random.randint(1024, 65535))

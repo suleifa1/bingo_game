@@ -22,142 +22,134 @@
 
 
 
-    <!-- Страница регистрации -->
-    <section id="registration" class="page ">
+    <!-- registration-->
+    <section id="registration" class="page">
         <div class="container">
             <div class="registration-box">
-                <h1>Добро пожаловать в Bingo!</h1>
-                <p>Введите ваш никнейм для регистрации:</p>
-                <input type="text" id="nickname" placeholder="Ваш никнейм">
-                <button onclick="register()">Зарегистрироваться</button>
+                <h1>Welcome to Bingo!</h1>
+                <p>Enter your nickname to register:</p>
+                <input type="text" id="nickname" placeholder="Your nickname">
+                <button onclick="register()">Register</button>
             </div>
         </div>
     </section>
 
-    <!-- Лобби -->
+    <!-- lobby -->
     <section id="lobby" class="page hidden">
         <div class="container">
             <div class="lobby-box">
-                <h1>Лобби Bingo</h1>
+                <h1>Bingo Lobby</h1>
 
-                <!-- Действия -->
+                <!-- Actions -->
                 <div class="actions">
-                    <button onclick="findGame()">Поиск Игры</button>
-                    <button onclick="disconnect()">Выход</button>
+                    <button onclick="findGame()">Find Game</button>
+                    <button onclick="disconnect()">Exit</button>
                 </div>
 
-                <!-- Правила игры -->
+                <!-- Game Rules -->
                 <div class="rules">
-                    <h3>Правила Игры</h3>
-                    <p>Бинго — это игра, в которой нужно отметить числа на своей карточке. Слушайте номера, которые объявляются, и отмечайте их. Когда у вас будет линия или полный ряд отмеченных номеров, вы можете крикнуть "Бинго!" и выиграть!</p>
+                    <h3>Game Rules</h3>
+                    <p>Bingo is a game where you need to mark numbers on your card. Listen for the numbers that are called out and mark them. When you have a line or a full row of marked numbers, you can shout "Bingo!" and win!</p>
+                    <p>If you mark all the numbers on your card, you win the game!</p>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Комната ожидания -->
+
+    <!-- wait section -->
     <section id="waiting-room" class="page hidden">
         <div class="container">
             <div class="room-box">
-                <h1>Комната ожидания</h1>
+                <h1>Waiting Room</h1>
 
-
-                <!-- Действия -->
+                <!-- Actions -->
                 <div class="actions">
-                    <button id="get_button" onclick="askTicket()">Взять Билет</button>
-                    <button onclick="leaveRoom()">Выйти</button>
+                    <button id="get_button" onclick="askTicket()">Get Ticket</button>
+                    <button onclick="leaveRoom()">Leave</button>
                 </div>
 
-                <!-- Билет бинго -->
+                <!-- Bingo Ticket -->
                 <div id="ticket" class="ticket hidden">
-                    <h3>Ваш Билет</h3>
+                    <h3>Your Ticket</h3>
                     <div class="ticket-grid">
-                        <!-- Номера билета будут добавлены сюда -->
+                        <!-- Ticket numbers will be added here -->
                     </div>
                 </div>
 
-                                <!-- Область для последних сообщений чата -->
+                <!-- Area for Latest Chat Messages -->
                 <div id="system-messages" class="system-messages">
-                    <!-- Сообщения будут добавляться сюда -->
+                    <!-- Messages will be added here -->
                 </div>
 
             </div>
         </div>
     </section>
 
-    <!-- Игровая секция -->
+    <!-- game section -->
     <section id="game-page" class="page hidden">
         <div class="container">
             <div class="game-box">
-                <h1>Игра Bingo</h1>
+                <h1>Bingo Game</h1>
 
                 <div id="status-display"></div>
 
                 <div class="called-numbers">
-                    <h3>Вызванные номера:</h3>
+                    <h3>Called Numbers:</h3>
                     <div id="called-numbers-list" class="numbers-list">
-                        <!-- Вызванные номера будут добавлены сюда -->
+                        <!-- Called numbers will be added here -->
                     </div>
                 </div>
 
-                <!-- Показ текущего номера -->
+                <!-- Current Number Display -->
                 <div class="current-number">
-                    <h2>Текущий номер:</h2>
+                    <h2>Current Number:</h2>
                     <div id="number-display">--</div>
                 </div>
 
-
-
-                <!-- Карточка игрока -->
+                <!-- Player's Ticket -->
                 <div class="ticket">
-                    <h3>Ваша Карточка</h3>
+                    <h3>Your Ticket</h3>
                     <div class="ticket-grid">
-                        <!-- Номера билета будут добавлены сюда -->
+                        <!-- Ticket numbers will be added here -->
                     </div>
                 </div>
 
-                <!-- Кнопка для бинго -->
-                <button class="bingo-button" onclick="declareBingo()">Бинго!</button>
-
-
-
+                <!-- Bingo Button -->
+                <button class="bingo-button" onclick="declareBingo()">Bingo!</button>
             </div>
         </div>
     </section>
 
-<!-- Страница победы -->
-<!-- Страница победы -->
+    <!-- win-->
     <section id="win-game" class="page hidden">
         <div class="container">
             <div class="win-box">
-                <h1>Поздравляем, вы выиграли!</h1>
+                <h1>Congratulations, you won!</h1>
                 <div id="fireworks-container" class="fireworks">
-                    <!-- Фейерверк будет отображаться здесь -->
+                    <!-- Fireworks will be displayed here -->
                 </div>
                 <div class="actions">
-                    <button onclick="leaveRoom()">Выйти в лобби</button>
-                    <button onclick="disconnect()">Выйти из игры</button>
+                    <button onclick="leaveRoom()">Return to Lobby</button>
+                    <button onclick="disconnect()">Exit Game</button>
                 </div>
             </div>
         </div>
     </section>
 
-
-    <!-- Страница проигрыша -->
+    <!-- loose -->
     <section id="lose-game" class="page hidden">
         <div class="container">
             <div class="lose-box">
-                <h1>Вы проиграли</h1>
-                <p>Не расстраивайтесь, удача улыбнется вам в следующий раз!</p>
+                <h1>You Lost</h1>
+                <p>Don't be upset, luck will smile on you next time!</p>
                 <div class="actions">
-                    <button onclick="leaveRoom()">Выйти в лобби</button>
-                    <button onclick="disconnect()">Выйти из игры</button>
+                    <button onclick="leaveRoom()">Return to Lobby</button>
+                    <button onclick="disconnect()">Exit Game</button>
                 </div>
             </div>
         </div>
     </section>
-
-
 
 
 </body>
