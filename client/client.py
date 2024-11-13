@@ -181,6 +181,8 @@ class Client:
                 print(f"called directly")
             self.connected = False
             self.attempt_count = 0
+            if self.socket:
+                self.socket.close()
 
             while not self.connected:
                 try:
@@ -209,6 +211,7 @@ class Client:
             self.lock.release()
 
     def start(self):
+        self.connect_to_server()
         threading.Thread(target=self.receive_messages, daemon=True).start()
 
     def send_command(self, command, data=b''):
@@ -315,27 +318,27 @@ class Client:
             print("Unknown command received.")
 
     def receive_messages(self):
-
         while True:
-            if not self.connected:
-                self.connect_to_server()
-                continue
-
             try:
+                #self.socket.settimeout(5)
                 header = self.socket.recv(10)
+                #self.socket.settimeout(None)
                 if not header:
                     raise socket.error("Server disconnected.")
 
                 prefix = header[0:2].decode()
                 command = int.from_bytes(header[2:6], 'little')
                 length = int.from_bytes(header[6:10], 'little')
+                print(length)
 
                 if prefix == 'SP':
                     payload = self.socket.recv(length) if length > 0 else b''
                     self.process_payload(Command(command), payload)
                 else:
                     print("Unknown prefix")
+            except socket.timeout:
+                continue
             except socket.error:
                 self.connect_to_server()
-                time.sleep(5)
+
 
