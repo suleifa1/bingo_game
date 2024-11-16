@@ -20,6 +20,10 @@
     eel.expose(showConnectionStatus);
     eel.expose(hideConnectionStatus)
 
+    eel.expose(showServerStatus);
+    eel.expose(hideServerStatus);
+
+
     async function register() {
         let nickname = document.getElementById("nickname").value;
         await eel.register(nickname)();
@@ -256,6 +260,21 @@
         document.getElementById("connection-status").classList.add("hidden");
 
     }
+
+    function showServerStatus() {
+        const serverStatusElement = document.getElementById("server-status");
+        serverStatusElement.classList.remove("hidden");
+
+        document.getElementById("exit-server-button").classList.remove("hidden");
+    }
+
+    function hideServerStatus(){
+        document.getElementById("server-status").classList.add("hidden");
+    }
+
+
+
+
 
     function markMissingNumbers(callNumbers) {
         callNumbers.forEach(number => {

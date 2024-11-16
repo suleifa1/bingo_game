@@ -8,7 +8,7 @@ from client import Client  # Предполагается, что класс Cli
 
 eel.init('web')
 
-client = Client("147.228.234.201", 4242)
+client = Client("127.0.0.1", 4242)
 
 
 def check_connection_status():

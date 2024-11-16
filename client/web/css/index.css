@@ -450,7 +450,7 @@ body {
 }
 
 
-#connection-status {
+#connection-status, #server-status {
     position: fixed;
     top: 50%;
     left: 50%;
@@ -463,12 +463,12 @@ body {
     z-index: 1000;
 }
 
-#connection-message {
+#connection-message, #server-message {
     font-size: 1.2em;
     margin-bottom: 10px;
 }
 
-#exit-button {
+#exit-button, #exit-server-button {
     background-color: #ff6b6b;
     border: none;
     color: white;
@@ -478,7 +478,7 @@ body {
     transition: background-color 0.3s ease;
 }
 
-#exit-button:hover {
+#exit-button:hover, #exit-server-button:hover {
     background-color: #ff5252;
 }
 

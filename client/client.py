@@ -196,6 +196,7 @@ class Client:
                     eel.hideConnectionStatus()
                     self.last_pong_time = time.time()
                     if self.nickname is not None:
+                        print("huj")
                         self.register(self.nickname)
 
                 except socket.error as e:
@@ -216,12 +217,11 @@ class Client:
 
     def send_command(self, command, data=b''):
         header = b'SP' + command.value.to_bytes(4, 'little') + len(data).to_bytes(4, 'little')
-        with self.lock:
-            try:
-                self.socket.sendall(header + data)
-            except socket.error:
-                self.connect_to_server()
-                time.sleep(5)
+        try:
+            self.socket.sendall(header + data)
+        except socket.error:
+            self.connect_to_server()
+            time.sleep(5)
 
     def register(self, nickname):
         self.send_command(Command.REGISTER, nickname.encode())
@@ -320,13 +320,15 @@ class Client:
     def receive_messages(self):
         while True:
             try:
-                #self.socket.settimeout(5)
+                self.socket.settimeout(5)
                 header = self.socket.recv(10)
-                #self.socket.settimeout(None)
+                self.socket.settimeout(None)
                 if not header:
                     raise socket.error("Server disconnected.")
-
-                prefix = header[0:2].decode()
+                try:
+                    prefix = header[0:2].decode()
+                except UnicodeDecodeError as e:
+                    prefix = ''
                 command = int.from_bytes(header[2:6], 'little')
                 length = int.from_bytes(header[6:10], 'little')
                 print(length)
@@ -335,7 +337,8 @@ class Client:
                     payload = self.socket.recv(length) if length > 0 else b''
                     self.process_payload(Command(command), payload)
                 else:
-                    print("Unknown prefix")
+                    eel.showServerStatus()
+                    break
             except socket.timeout:
                 continue
             except socket.error:
