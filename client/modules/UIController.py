@@ -6,14 +6,7 @@ from modules.client import Client
 
 client = None
 
-
-def init_eel(ip, port):
-    """
-    Инициализация клиента и eel.
-    """
-    global client
-    client = Client(ip, port)
-    eel.init('web')
+eel.init('web')
 
 
 def check_connection_status():
@@ -70,15 +63,12 @@ def start_application(ip, port):
     """
     Запуск eel и клиента.
     """
-    # Инициализация eel и клиента
-    init_eel(ip, port)
 
-    # Запуск потока проверки соединения
+    global client
+    client = Client(ip, port)
+
     threading.Thread(target=check_connection_status, daemon=True).start()
+    client.start()
 
     eel.start('index.html', size=(600, 720), port=random.randint(1024, 65535))
 
-    # Запуск клиента
-    client.start()
-
-    # Запуск веб-интерфейса
