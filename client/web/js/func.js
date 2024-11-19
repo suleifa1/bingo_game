@@ -22,6 +22,7 @@
 
     eel.expose(showServerStatus);
     eel.expose(hideServerStatus);
+    eel.expose(clearSysMessages)
 
 
     async function register() {
@@ -44,6 +45,12 @@
 
     async function askTicket() {
         await eel.ask_ticket()();
+    }
+
+    function clearSysMessages(){
+        chatMessages = [];
+        document.getElementById("system-messages").innerHTML = '';
+
     }
 
     function displayTicket(numbers, isGame) {
@@ -131,7 +138,6 @@
     function showSystemMessage(message) {
         const container = document.getElementById("system-messages");
 
-        // Создаем элемент сообщения
         const messageElement = document.createElement("div");
         messageElement.classList.add("system-message");
         messageElement.textContent = message;

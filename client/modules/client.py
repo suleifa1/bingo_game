@@ -43,10 +43,9 @@ def handle_room_update(room_info):
 
 
 def unpack_client(data):
-    # Формат строки для struct.unpack
-    # s - строка байтов фиксированной длины, 32s - строка длиной 32 байта (например, для никнейма)
-    # i - целое число 4 байта
-    # I - беззнаковое целое число 4 байта
+    # s строка байтов фиксированной длины, 32s - строка длиной 32 байта (никнейм)
+    # i целое число 4 байта
+    # I беззнаковое целое число 4 байта
     format_str = f'{MAX_NICKNAME_LEN}s i i i {TICKET_SIZE}i {TICKET_SIZE}i i i I I I'
 
     # Распаковка данных согласно формату
@@ -296,6 +295,7 @@ class Client:
 
             elif State(self.data.get('state')) == State.STATE_LOBBY:
                 eel.showPage("lobby")
+                eel.clearSysMessages()
 
             elif State(self.data.get('state')) == State.STATE_END_WIN:
                 eel.showPage("win-game")
