@@ -10,119 +10,9 @@
 #include <errno.h>
 #include <time.h>
 #include <signal.h>
-
-#define PORT 4242
-#define MAX_CLIENTS 12
-#define TICKET_SIZE 5
-#define PING_INTERVAL 5
-#define TIMEOUT 15
-#define RECONNECT_TIMEOUT 100
-#define MAX_NICKNAME_LEN 20
-#define MAX_ROOMS (MAX_CLIENTS / 3)
-#define MAX_PLAYERS_IN_ROOM (MAX_CLIENTS / MAX_ROOMS)
-#define MAX_NUMBERS 40
+#include <ifaddrs.h>
 #include <fcntl.h>
-
-
-enum ClientState {
-    STATE_REGISTER,
-    STATE_LOBBY,
-    STATE_RECONNECTING,
-    STATE_DISCONNECTED,
-
-    STATE_WAITING_FOR_GAME,
-
-    STATE_GOT_TICKET,
-    STATE_GET_NUMBER,
-    STATE_MARK_NUMBER,
-
-    STATE_BINGO_CHECK,
-    STATE_WIN_GAME,
-    STATE_LOSE_GAME
-};
-
-enum GameState {
-    GAME_WAITING,
-    GAME_PLAY,
-    GAME_FINISH,
-
-    GAME_SEND_NUMBER,
-    GAME_WAIT_FOR_MARK,
-    GAME_CHECK_BINGO
-};
-
-enum CommandType {
-    CMD_REGISTER,
-    CMD_READY, //?
-    CMD_MARK_NUMBER,
-    CMD_BINGO,
-    CMD_RECONNECT,
-    CMD_PONG,
-    CMD_ASK_TICKET,
-    TOTAL_CMD,
-
-    CMDS_SEND_TICKET,
-    CMDS_START_GAME,
-    CMDS_SEND_NUMBER,
-    CMDS_BINGO_CHECK,
-    CMDS_PING,
-    CMDS_OK,
-    CMDS_END_GAME,
-    CMDS_USER_INFO,
-    CMD_FINDGAME,
-    CMDS_ROOM_INFO,
-    CMD_EXIT_ROOM,
-    CMD_CALL_NUM,
-
-    TOTAL_CMDS
-};
-
-struct Client {
-    char nickname[MAX_NICKNAME_LEN];
-    int socket;
-    int state;
-    int prev_state;
-    int ticket[TICKET_SIZE];
-    int marked[TICKET_SIZE];
-    int ticket_count;
-    int room_id;
-    uint32_t last_ping;
-    uint32_t last_pong;
-    uint32_t disconnect_time;
-}__attribute__((packed));;
-
-struct GameRoom {
-    int roomId;
-    enum GameState gameState;
-    int playerCount;
-    struct Client *players[MAX_CLIENTS / MAX_ROOMS];
-    int calledNumbers[MAX_NUMBERS];
-    int totalNumbersCalled;
-    int availableNumbers[MAX_NUMBERS];
-    int totalAvailableNumbers;
-    int unpause;
-};
-
-struct RoomInfo {
-    int roomId;
-    int gameState;
-    int playerCount;
-    char playerNicknames[MAX_PLAYERS_IN_ROOM][MAX_NICKNAME_LEN];
-    int calledNumbers[MAX_NUMBERS];
-    int totalNumbersCalled;
-    int unpause;
-} __attribute__((packed));
-
-
-struct MessageHeader {
-    char prefix[2];
-    uint32_t command;
-    uint32_t length;
-}__attribute__((packed));
-
-
-struct Client clients[MAX_CLIENTS];
-struct GameRoom gameRooms[MAX_ROOMS];
+#include "./includes/common.h"
 
 int buffer_to_int(const void *buffer) {
     return *((int *)buffer);
@@ -158,8 +48,6 @@ void print_client_info(const struct Client *client) {
     // printf("-------------------\n\n");
 }
 
-
-
 /// {client functions}
 int initialize_server(struct sockaddr_in *address) {
     int server_socket = socket(AF_INET, SOCK_STREAM, 0);
@@ -169,7 +57,13 @@ int initialize_server(struct sockaddr_in *address) {
     }
 
     address->sin_family = AF_INET;
-    address->sin_addr.s_addr = INADDR_ANY;
+
+    if (inet_pton(AF_INET, SERVER_IP, &address->sin_addr) <= 0) {
+        perror("Invalid IP address in SERVER_IP");
+        close(server_socket);
+        exit(EXIT_FAILURE);
+    }
+
     address->sin_port = htons(PORT);
 
     if (bind(server_socket, (struct sockaddr *) address, sizeof(*address)) < 0) {
@@ -183,8 +77,6 @@ int initialize_server(struct sockaddr_in *address) {
         close(server_socket);
         exit(EXIT_FAILURE);
     }
-
-    printf("Server initialized and listening on %s:%d...\n", inet_ntoa(address->sin_addr), PORT);
     return server_socket;
 }
 
@@ -238,7 +130,6 @@ void send_called_numbers(struct Client *client) {
         printf("Called numbers sent to client %s\n", client->nickname);
     }
 }
-
 
 void send_room_info(struct Client *client) {
     if (client->room_id == -1) {
@@ -603,7 +494,6 @@ void send_user_info(struct Client *client) {
     }
 }
 
-
 void end_game_in_room(struct GameRoom *room) {
     // Обнуляем состояние игроков и переводим их в начальное состояние
     for (int i = 0; i < room->playerCount; i++) {
@@ -810,24 +700,6 @@ void add_new_client(int new_socket, struct sockaddr_in *address) {
     }
 }
 
-// void handle_ready_command(struct Client *client) {
-//         client->state = STATE_READY;
-//         printf("Client %s is ready\n", client->nickname);
-//
-//         struct GameRoom *room = &gameRooms[client->room_id];
-//         int all_ready = 1;
-//         for (int i = 0; i < room->playerCount; i++) {
-//             if (room->players[i]->state != STATE_READY) {
-//                 all_ready = 0;
-//                 break;
-//             }
-//         }
-//
-//         if (all_ready) {
-//             start_game_in_room(client->room_id);
-//         }
-// }
-
 void handle_ping_pong(int client_index) {
     if (clients[client_index].state == STATE_DISCONNECTED || clients[client_index].socket == 0) return;
 
@@ -934,7 +806,6 @@ void handle_reconnect_request(int new_socket, const char* nickname, struct Clien
 
     } else {
         printf("Reconnect failed: client %s not found in RECONNECTING state\n", nickname);
-        //close(new_socket);  // Закрываем неподключённый сокет
     }
 }
 
@@ -946,7 +817,6 @@ void process_command(struct Client *client, enum CommandType command, char *payl
 
                 size_t copy_len = (length < MAX_NICKNAME_LEN - 1) ? length : MAX_NICKNAME_LEN - 1;
 
-                // Копируем только нужное количество байтов
                 strncpy(client->nickname, payload, copy_len);
 
                 // Завершаем строку нулевым байтом
@@ -1139,10 +1009,63 @@ void handle_client_data(struct Client *client) {
         }
     }
 
-    // Обработка команды клиента
     process_command(client, header.command, payload, header.length);
 
     if (payload) free(payload);
+}
+
+int is_invalid_ip(const char *ip) {
+    struct in_addr addr;
+    inet_pton(AF_INET, ip, &addr);
+
+    uint32_t ip_addr = ntohl(addr.s_addr);
+
+    if (ip_addr >= 0x7F000000 && ip_addr <= 0x7FFFFFFF) { // loopback range
+        return 1;
+    }
+
+    if ((ip_addr >= 0x0A000000 && ip_addr <= 0x0AFFFFFF) || // 10.0.0.0 - 10.255.255.255
+        (ip_addr >= 0xAC100000 && ip_addr <= 0xAC1FFFFF) || // 172.16.0.0 - 172.31.255.255
+        (ip_addr >= 0xC0A80000 && ip_addr <= 0xC0A8FFFF)) { // 192.168.0.0 - 192.168.255.255
+        return 1;
+        }
+
+    if ((ip_addr >= 0xA9FE0000 && ip_addr <= 0xA9FEFFFF) || // 169.254.0.0 - 169.254.255.255 (APIPA)
+        (ip_addr >= 0x64400000 && ip_addr <= 0x647FFFFF)) { // 100.64.0.0 - 100.127.255.255 (CGNAT)
+        return 1;
+        }
+
+    return 0;
+}
+
+void print_server_ip() {
+    if (strcmp(SERVER_IP, "0.0.0.0") != 0) {
+        printf("Server is running on IP: %s:%d\n", SERVER_IP, PORT);
+        return;
+    }
+    struct ifaddrs *interfaces, *iface;
+    char ip[INET_ADDRSTRLEN];
+
+    if (getifaddrs(&interfaces) == -1) {
+        perror("getifaddrs failed");
+        return;
+    }
+
+    iface = interfaces;
+    while (iface) {
+        if (iface->ifa_addr && iface->ifa_addr->sa_family == AF_INET) {
+            struct sockaddr_in *addr = (struct sockaddr_in *)iface->ifa_addr;
+            inet_ntop(AF_INET, &addr->sin_addr, ip, sizeof(ip));
+
+            if (!is_invalid_ip(ip)) {
+                printf("Public IP: %s:%d\n", ip,PORT);
+                break;
+            }
+        }
+        iface = iface->ifa_next;
+    }
+
+    freeifaddrs(interfaces);
 }
 
 void reserve_descriptors() {
@@ -1155,15 +1078,62 @@ void reserve_descriptors() {
         exit(EXIT_FAILURE);
     }
 
-    // Удаляем временные файлы
     unlink("/tmp/tempfile1");
     unlink("/tmp/tempfile2");
     unlink("/tmp/tempfile3");
 }
 
+void initialize_settings_from_config(const char *filename) {
+    FILE *file = fopen(filename, "r");
+    if (!file) {
+        perror("Could not open config file. Using default settings.");
+        return;
+    }
+
+    char line[128];
+    while (fgets(line, sizeof(line), file)) {
+        char key[64], value[64];
+        if (sscanf(line, "%63[^=]=%63s", key, value) == 2) {
+            int option = 0;
+
+            if (strcmp(key, "ip") == 0) option = 1;
+            else if (strcmp(key, "port") == 0) option = 2;
+
+            switch (option) {
+                case 1: { // ip
+                    struct in_addr addr;
+                    if (inet_pton(AF_INET, value, &addr)) {
+                        strncpy(SERVER_IP, value, INET_ADDRSTRLEN);
+                    } else {
+                        printf("Invalid IP in config: %s. Using default: %s\n", value, DEFAULT_IP);
+                    }
+                    break;
+                }
+                case 2: { // port
+                    int port = atoi(value);
+                    if (port > 0 && port <= 65535) {
+                        PORT = port;
+                    } else {
+                        printf("Invalid port in config: %s. Using default: %d\n", value, DEFAULT_PORT);
+                    }
+                    break;
+                }
+                default:
+                    printf("Unknown key in config: %s. Ignoring.\n", key);
+                break;
+            }
+        }
+    }
+
+    fclose(file);
+}
+
+
 int temp_fd1, temp_fd2, temp_fd3;
 
 int main(void) {
+    initialize_settings_from_config("./config.cfg");
+
     signal(SIGPIPE, SIG_IGN);
     int server_socket, new_socket, max_sd, sd, activity;
     struct sockaddr_in address;
@@ -1171,6 +1141,7 @@ int main(void) {
     struct timeval timeout;
 
     server_socket = initialize_server(&address);
+    print_server_ip();
     initialize_clients();
     initialize_game_rooms();
 
@@ -1213,7 +1184,6 @@ int main(void) {
 
             sd = clients[i].socket;
             if (FD_ISSET(sd, &readfds)) {
-                // Process client data
                 handle_client_data(&clients[i]);
             }
             handle_ping_pong(i);

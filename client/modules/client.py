@@ -195,9 +195,16 @@ class Client:
                     eel.hideConnectionStatus()
                     self.last_pong_time = time.time()
                     if self.nickname is not None:
-                        print("huj")
                         self.register(self.nickname)
 
+                except socket.timeout:
+                    self.attempt_count += 1
+                    eel.showConnectionStatus(
+                        f"Connection with server lost. Trying to reconnect. "
+                        f"Attempt: {self.attempt_count}",
+                        self.attempt_count
+                    )
+                    time.sleep(RECONNECT_DELAY)
                 except socket.error as e:
                     self.attempt_count += 1
                     eel.showConnectionStatus(

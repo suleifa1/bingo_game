@@ -1,13 +1,12 @@
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
-#include <netinet/in.h>
-#include <sys/errno.h>
-#include <sys/signal.h>
 #include <sys/socket.h>
-#include <sys/_select.h>
-#include <sys/_types/_fd_def.h>
-#include <sys/_types/_socklen_t.h>
+#include <netinet/in.h>
+#include <unistd.h>
+#include <errno.h>
+#include <signal.h>
+
 
 #include "includes/client.h"
 #include "includes/server.h"
